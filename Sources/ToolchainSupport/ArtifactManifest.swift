@@ -29,6 +29,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let macroAdapterSHA256: String
     /// Complete source and SDK identities remain available after archives leave the build tree.
     package let inputs: ToolchainConfiguration
+    /// Native macro build inputs remain outside the application's SwiftPM product.
+    package let macroBuildSupport: MacroBuildSupport
     /// Each framework remains replaceable behind the consumer's single product.
     package let artifacts: [CompilerArtifact]
 
@@ -70,6 +72,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         ] {
             try CompilerArtifact.validateChecksum(checksum)
         }
+        try macroBuildSupport.validate()
         let names = artifacts.map(\.name)
         guard Set(names).count == names.count else {
             throw .invalidArtifact("Artifact names must be unique.")

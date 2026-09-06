@@ -19,6 +19,7 @@ artifacts from Git's source inventory. Commit validation is shared by the local 
 
 - ``ArtifactManifest``
 - ``CompilerArtifact``
+- ``MacroBuildSupport``
 
 ### Repository checks
 

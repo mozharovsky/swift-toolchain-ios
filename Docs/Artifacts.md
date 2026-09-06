@@ -53,6 +53,12 @@ arm64 iOS slices. `Archives` contains ZIP files for SwiftPM binary targets. `Art
 records configuration, patch, SDK, archive, and executable identities. The generated `Package.swift`
 exposes one local `SwiftCompilerArtifacts` product for integration checks.
 
+`Development/MacroBuildSupport` contains native SwiftSyntax module metadata, matching support
+libraries, and open C-shim headers for building additional bundled macro implementations. Its ZIP
+has a separate manifest record and is not part of the app's SwiftPM product. This lets a consumer
+update its own native macro library without rebuilding the compiler or shipping build-only inputs
+in the application.
+
 SDK resources live inside `SwiftCompilerSDK.framework/Payload`. Serialized Swift modules are stored
 as Base64 data because Xcode strips native-module filenames during artifact processing. The
 `Materialization.json` records original module paths and digests for restoration by the consumer.

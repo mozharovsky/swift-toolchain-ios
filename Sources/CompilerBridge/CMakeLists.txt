@@ -21,3 +21,6 @@ add_custom_command(TARGET SwiftCompilerBridge POST_BUILD
     "-DTOOLCHAIN_REPOSITORY_ROOT=${TOOLCHAIN_REPOSITORY_ROOT}"
     "-DTOOLCHAIN_SWIFT_BUILD=${CMAKE_BINARY_DIR}"
     -P "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")
+set_property(TARGET SwiftCompilerBridge APPEND PROPERTY LINK_DEPENDS
+  "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/CacheManifest.cmake"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")

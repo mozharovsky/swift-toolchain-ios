@@ -19,7 +19,8 @@ endfunction()
 
 # File inventories reject extra cache entries instead of silently adopting a substituted library.
 function(toolchain_native_files output root)
-  file(GLOB files RELATIVE "${root}" "${root}/lib/swift/host/compiler/*.dylib")
+  file(GLOB files RELATIVE "${root}" "${root}/lib/swift/host/compiler/*.dylib"
+    "${root}/_deps/compilerswiftsyntax-build/Sources/*/*.swiftmodule")
   list(APPEND files "lib/libSwiftCompilerBridge.dylib")
   list(SORT files)
   set(${output} "${files}" PARENT_SCOPE)

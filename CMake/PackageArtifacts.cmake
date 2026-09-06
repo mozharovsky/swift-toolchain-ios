@@ -57,6 +57,7 @@ toolchain_framework_module("${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/SwiftCompile
   SwiftCompilerBridge "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/CompilerBridge/SwiftCompilerBridge.h")
 include("${CMAKE_CURRENT_LIST_DIR}/PrepareSDK.cmake")
 list(APPEND names SwiftCompilerSDK)
+include("${CMAKE_CURRENT_LIST_DIR}/PrepareMacroSDK.cmake")
 
 set(artifacts "[]")
 set(index 0)
@@ -116,7 +117,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"producerHasUncommittedChanges\": ${producer_dirty},\n"
   "  \"noticesSHA256\": \"${notices_checksum}\",\n"
   "  \"macroAdapterSHA256\": \"${adapter_checksum}\",\n"
-  "  \"inputs\": ${TOOLCHAIN_INPUTS},\n  \"artifacts\": ${artifacts}\n}\n")
+  "  \"macroBuildSupport\": ${macro_sdk_record},\n  \"inputs\": ${TOOLCHAIN_INPUTS},\n  \"artifacts\": ${artifacts}\n}\n")
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/Package.swift"
   "// swift-tools-version: 6.3\nimport PackageDescription\n\n"
   "let package = Package(name: \"SwiftCompilerArtifacts\", platforms: [.iOS(.v18)],\n"

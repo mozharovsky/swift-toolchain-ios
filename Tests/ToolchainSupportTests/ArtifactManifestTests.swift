@@ -96,6 +96,11 @@ struct ArtifactManifestTests {
                 repeating: "c",
                 count: 64,
             ), inputs: inputs,
+            macroBuildSupport: MacroBuildSupport(
+                archive: "MacroBuildSupport.zip",
+                checksum: String(repeating: "f", count: 64),
+                archiveBytes: 100,
+            ),
             artifacts: names.map { name in
                 CompilerArtifact(
                     name: name,
