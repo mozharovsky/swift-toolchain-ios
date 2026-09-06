@@ -1,0 +1,32 @@
+reviews:
+  auto_review:
+    enabled: true
+    base_branches:
+      - ".*"
+    auto_pause_after_reviewed_commits: 25
+  path_instructions:
+    - path: "**/*.swift"
+      instructions: |
+        Enforce AGENTS.md and Docs/Conventions.md. Require declaration documentation at every access
+        level and a purpose, dependent caller or subsystem, and a fact absent from the signature.
+        Reject force unwraps, forced casts, try!, implicitly unwrapped optionals, unowned captures,
+        redundant internal access modifiers, and weakened concurrency checks. Preserve typed throws
+        for closed error sets. Reject colon-led prose fragments and semicolon or em-dash chains.
+    - path: "{**/*.{h,cpp,cmake},CMakeLists.txt,**/CMakeLists.txt}"
+      instructions: |
+        Check native ownership, process-global compiler state, cancellation boundaries, and failure
+        recovery. Keep compiler-host and generated-program architectures distinct. Build inputs must
+        be pinned and public. Reject machine-specific paths or undeclared upstream cache dependencies.
+        A fatal handler does not establish safe recovery from arbitrary compiler failures.
+    - path: "**/*.md"
+      instructions: |
+        Enforce plain complete sentences and headings no deeper than level three. Distinguish current
+        code, plans, source inspection, build results, device execution, and distribution validation.
+        Reject private-input references and unsupported performance or approval claims. Preserve
+        upstream attribution. Code commands and procedural lists are valid reproduction instructions.
+    - path: ".github/workflows/*.yml"
+      instructions: |
+        Require full commit pins for actions and explicit least-privilege permissions. Ordinary pull
+        request checks must not start a full compiler build, run on a maintainer workstation, or
+        receive signing or publication credentials. Keep release publication a separately authorized
+        operation and report unexecuted CI as unverified.

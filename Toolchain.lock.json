@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "swiftVersion": "6.3.2",
+  "compilerHost": "arm64-apple-ios18.0",
+  "programTarget": "wasm32-unknown-wasip1",
+  "sources": [
+    {
+      "name": "swift",
+      "repository": "https://github.com/swiftlang/swift.git",
+      "revision": "cd8d8ad0019e4e291906b311e0d25d7039cddc9c",
+      "license": "Apache-2.0 WITH Swift-exception"
+    },
+    {
+      "name": "llvm-project",
+      "repository": "https://github.com/swiftlang/llvm-project.git",
+      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "license": "Apache-2.0 WITH LLVM-exception"
+    },
+    {
+      "name": "swift-syntax",
+      "repository": "https://github.com/swiftlang/swift-syntax.git",
+      "revision": "2b59c0c741e9184ab057fd22950b491076d42e91",
+      "license": "Apache-2.0 WITH Swift-exception"
+    },
+    {
+      "name": "swift-cmark",
+      "repository": "https://github.com/swiftlang/swift-cmark.git",
+      "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
+      "license": "BSD-2-Clause AND MIT"
+    },
+    {
+      "name": "string-processing",
+      "repository": "https://github.com/swiftlang/swift-experimental-string-processing.git",
+      "revision": "efe8986824694c53fd5e94a4c634f20b3682baeb",
+      "license": "Apache-2.0 WITH Swift-exception"
+    }
+  ],
+  "sdk": {
+    "version": "swift-6.3.2-RELEASE_wasm",
+    "url": "https://download.swift.org/swift-6.3.2-release/wasm-sdk/swift-6.3.2-RELEASE/swift-6.3.2-RELEASE_wasm.artifactbundle.tar.gz",
+    "sha256": "a61f0584c93283589f8b2f42db05c1f9a182b506c2957271402992655591dd7c"
+  }
+}

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if (($# != 1)); then
+    printf '%s\n' "Usage: Scripts/Hooks/commit-msg COMMIT_MESSAGE_FILE" >&2
+    exit 2
+fi
+
+repository_root="$(git rev-parse --show-toplevel)"
+exec swift run --package-path "${repository_root}" --quiet toolchain check-commit-message "$1"
