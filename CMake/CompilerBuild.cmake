@@ -1,4 +1,5 @@
 include(ExternalProject)
+include("${CMAKE_CURRENT_LIST_DIR}/ConfigurationInputs.cmake")
 
 if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
   message(FATAL_ERROR "Native compiler production currently requires an Apple silicon Mac.")
@@ -83,7 +84,7 @@ function(toolchain_native_stage name source profile)
     BUILD_ALWAYS TRUE
     INSTALL_COMMAND ""
     EXCLUDE_FROM_ALL TRUE)
-  ExternalProject_Add_StepDependencies(${name} configure
+  toolchain_watch_configuration(${name}
     "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/${profile}.cmake"
     "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/Common.cmake"
     "${TOOLCHAIN_LOCK_FILE}")

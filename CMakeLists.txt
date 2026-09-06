@@ -38,7 +38,14 @@ if(BUILD_TESTING)
     add_test(NAME NativeSourceFormatting
       COMMAND "${TOOLCHAIN_XCRUN}" clang-format --dry-run --Werror ${native_sources})
   endif()
-  set_tests_properties(CompilerBridgeContract PROPERTIES TIMEOUT 20)
+  add_test(NAME CompilerConfigurationInputs
+    COMMAND "${CMAKE_COMMAND}"
+      "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/configuration-input-tests"
+      "-DTOOLCHAIN_TEST_GENERATOR=${CMAKE_GENERATOR}"
+      "-DTOOLCHAIN_TEST_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ConfigurationInputs.cmake")
+  set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs PROPERTIES TIMEOUT 20)
 endif()
 
 if(TOOLCHAIN_ENABLE_COMPILER_BUILD)

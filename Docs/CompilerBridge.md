@@ -32,8 +32,9 @@ Early setup errors and detailed object-reader errors may also use standard error
 
 The small CMake target links the real C ABI wrapper to an explicitly named test backend. It checks
 C header linkage, argument validation, owned messages with embedded NUL bytes, ordinary error
-recovery, shared serialization, and sticky invalidation. Sanitizers check the host test executable.
-The test backend does not compile or interpret Swift, and its results are not compiler execution
-or physical-device evidence.
+recovery, shared serialization, and sticky invalidation. `TOOLCHAIN_ENABLE_SANITIZERS` defaults to
+`OFF`. Setting it to `ON` instruments only the host test executable with ASan and UBSan.
+`mise run native-check` enables this option. The test backend does not compile or interpret Swift.
+Its results are not compiler execution or physical-device evidence.
 
 The production Swift target links `NativeBackend.cpp`. The test backend is never part of that target.

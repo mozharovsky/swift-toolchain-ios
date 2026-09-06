@@ -23,9 +23,9 @@ mise run check
 swift run toolchain verify
 ```
 
-`mise run check` runs formatting, lint, source-inventory checks, Swift tests, DocC, and native
-contract tests.
-It does not download or build Swift or LLVM. See [Contributing](CONTRIBUTING.md) for local hooks and
+`mise run check` builds this repository's Swift package and runs formatting, lint, source-inventory
+checks, Swift tests, DocC, and native contract tests. It does not download or build the upstream Swift
+compiler or LLVM. See [Contributing](CONTRIBUTING.md) for local hooks and
 [Conventions](Docs/Conventions.md) for the code and review standards.
 
 ## Repository layout
