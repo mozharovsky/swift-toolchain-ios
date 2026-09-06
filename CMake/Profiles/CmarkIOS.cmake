@@ -9,3 +9,4 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET ${TOOLCHAIN_DEPLOYMENT_TARGET} CACHE STRING "Nat
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "Configuration probes need no signing." FORCE)
 set(CMAKE_MACOSX_BUNDLE OFF CACHE BOOL "The unselected cmark command must not require bundle installation rules." FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "Only the required static markup library is selected." FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "The compiler links cmark statically." FORCE)

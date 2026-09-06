@@ -6,7 +6,8 @@ find_package(LLD CONFIG REQUIRED
   PATHS "${TOOLCHAIN_BUILD_ROOT}/llvm-ios/lib/cmake/lld" NO_DEFAULT_PATH)
 
 add_swift_host_library(SwiftCompilerBridge SHARED
-  SwiftCompilerBridge.cpp NativeBackend.cpp)
+  "${CMAKE_CURRENT_LIST_DIR}/SwiftCompilerBridge.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/NativeBackend.cpp")
 target_sources(SwiftCompilerBridge PRIVATE
   "${TOOLCHAIN_SWIFT_SOURCE}/lib/DriverTool/autolink_extract_main.cpp")
 target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}/lld/include")

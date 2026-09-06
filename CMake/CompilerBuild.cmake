@@ -94,7 +94,7 @@ toolchain_native_stage(host-tools "${TOOLCHAIN_LLVM_SOURCE}/llvm" HostTools llvm
 add_dependencies(host-tools source-llvm-project)
 toolchain_native_stage(llvm-ios "${TOOLCHAIN_LLVM_SOURCE}/llvm" LLVM-IOS ${TOOLCHAIN_NATIVE_LIBRARIES})
 add_dependencies(llvm-ios host-tools)
-toolchain_native_stage(cmark-ios "${TOOLCHAIN_CMARK_SOURCE}" CmarkIOS cmark-gfm_static)
+toolchain_native_stage(cmark-ios "${TOOLCHAIN_CMARK_SOURCE}" CmarkIOS libcmark-gfm)
 add_dependencies(cmark-ios source-swift-cmark llvm-ios)
 toolchain_native_stage(swift-ios "${TOOLCHAIN_SWIFT_SOURCE}" SwiftIOS SwiftCompilerBridge)
 add_dependencies(swift-ios source-swift source-swift-syntax source-string-processing cmark-ios)

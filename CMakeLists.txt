@@ -45,7 +45,16 @@ if(BUILD_TESTING)
       "-DTOOLCHAIN_TEST_GENERATOR=${CMAKE_GENERATOR}"
       "-DTOOLCHAIN_TEST_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ConfigurationInputs.cmake")
-  set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs PROPERTIES TIMEOUT 20)
+  add_test(NAME CompilerBridgeConfiguration
+    COMMAND "${CMAKE_COMMAND}"
+      -S "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/BridgeFixture"
+      -B "${CMAKE_CURRENT_BINARY_DIR}/bridge-configure-fixture"
+      -G "${CMAKE_GENERATOR}"
+      "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+      "-DCMAKE_PROJECT_Swift_INCLUDE=${CMAKE_SOURCE_DIR}/CMake/IncludeBridge.cmake"
+      "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}")
+  set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
+    CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()
 
 if(TOOLCHAIN_ENABLE_COMPILER_BUILD)
