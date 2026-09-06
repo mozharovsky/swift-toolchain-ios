@@ -12,7 +12,7 @@ reviews:
         Reject force unwraps, forced casts, try!, implicitly unwrapped optionals, unowned captures,
         redundant internal access modifiers, and weakened concurrency checks. Preserve typed throws
         for closed error sets. Reject colon-led prose fragments and semicolon or em-dash chains.
-    - path: "**/*.{h,cpp,cmake}"
+    - path: "{**/*.{h,cpp,cmake},CMakeLists.txt,**/CMakeLists.txt}"
       instructions: |
         Check native ownership, process-global compiler state, cancellation boundaries, and failure
         recovery. Keep compiler-host and generated-program architectures distinct. Build inputs must

@@ -8,6 +8,19 @@ struct CommitMessageTests {
         try CommitMessage.validate(Self.validMessage)
     }
 
+    /// Git metadata may precede or follow the sign-off inside the final trailer block.
+    @Test(arguments: [0, 1, 2])
+    func acceptsSignOffWithinFinalBlock(position: Int) throws {
+        var trailers = [
+            "Reviewed-by: Example Reviewer <reviewer@example.com>",
+            "Co-authored-by: Example Contributor <contributor@example.com>",
+        ]
+        trailers.insert("Signed-off-by: Example Author <author@example.com>", at: position)
+        let message = "build(compiler): pin source revisions\n\nKeep source inputs stable.\n\n"
+            + trailers.joined(separator: "\n") + "\n"
+        try CommitMessage.validate(message)
+    }
+
     /// A sign-off mentioned in the body does not certify the final commit message.
     @Test func rejectsBodySignOff() {
         #expect(throws: ToolchainError.self) {

@@ -8,3 +8,6 @@ Upstreams/
 *.xcarchive/
 *.xcodeproj/
 *.xcworkspace/
+SDK/
+SDKs/
+*.sdk/

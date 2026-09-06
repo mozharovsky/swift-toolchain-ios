@@ -13,7 +13,9 @@ struct RepositoryPolicyTests {
     /// Binary directories and traversal remain invalid even when Git would accept their names.
     @Test(arguments: [
         "../outside.swift", "/absolute.swift", "Sources//File.swift", "Sources\\File.swift",
-        ".cache/source.swift", "SDK/SwiftUI.swiftinterface", "Library.xcframework/Info.plist",
+        ".cache/source.swift", "SDK/SwiftUI.swiftinterface",
+        "SDK/usr/include/Example.h", "SDKs/metadata.plist",
+        "Toolchains/iPhoneOS.sdk/usr/include/Example.h", "Library.xcframework/Info.plist",
         "libCompiler.a", "program.wasm", "release.zip",
     ])
     func rejectsUnsupportedInventory(path: String) {

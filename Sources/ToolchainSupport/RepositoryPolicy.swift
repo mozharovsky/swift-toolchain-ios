@@ -4,13 +4,14 @@ package import Foundation
 package enum RepositoryPolicy {
     /// Compiler and linker outputs belong in ignored caches or release archives.
     private static let artifactExtensions: Set<String> = [
-        "a", "app", "dylib", "gz", "ipa", "o", "so", "swiftinterface", "swiftmodule",
+        "a", "app", "dylib", "gz", "ipa", "o", "sdk", "so", "swiftinterface", "swiftmodule",
         "tar", "wasm", "xcframework", "xcodeproj", "xcworkspace", "zip",
     ]
 
     /// Ignored work directories must not become tracked inputs through a forced Git add.
     private static let workDirectories: Set<String> = [
-        ".build", ".cache", ".git", ".swiftpm", "Artifacts", "DerivedData", "Upstreams",
+        ".build", ".cache", ".git", ".swiftpm", "Artifacts", "DerivedData", "SDK", "SDKs",
+        "Upstreams",
     ]
 
     /// CI supplies Git's file list so ignored upstream checkouts are never traversed.

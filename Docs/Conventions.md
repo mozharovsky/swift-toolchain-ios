@@ -63,7 +63,8 @@ authorize the GitHub application.
 
 ## Contributions
 
-Use scoped Conventional Commits under 72 characters with a body explaining the reason and a final
-DCO sign-off. Review fixes use new commits. Pull request descriptions explain the resulting behavior
+Use scoped Conventional Commits under 72 characters with a body explaining the reason and a
+DCO sign-off in the final trailer block. Other trailers may follow the sign-off within that block.
+Review fixes use new commits. Pull request descriptions explain the resulting behavior
 and validation. Record unverified platforms and deferred work without implying those checks passed.
 Humans merge changes after required checks and review findings are resolved.

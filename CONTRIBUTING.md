@@ -28,7 +28,8 @@ Read [AGENTS.md](AGENTS.md) and [Conventions](Docs/Conventions.md). Add focused 
 failure boundary changes. Keep documentation and validation results tied to the actual code.
 
 Use a subject such as `build(compiler): pin frontend sources`, a body explaining the reason, and a
-final `Signed-off-by` trailer. `git commit -s` adds the DCO trailer. By signing off, you certify the
+`Signed-off-by` entry in the final trailer block. `git commit -s` adds the DCO trailer. By signing off,
+you certify the
 [Developer Certificate of Origin](https://developercertificate.org/).
 
 Use small stacked changes when a feature needs several reviewable steps. Follow the pull request

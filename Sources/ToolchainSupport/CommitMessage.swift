@@ -2,7 +2,8 @@ import Foundation
 
 /// Commit checks shared by the local hook and CI's complete-message stream.
 package enum CommitMessage {
-    /// Repository history requires a scoped subject, a reason, and a final DCO trailer.
+    /// Repository history requires a scoped subject, a reason, and a DCO entry in its final trailer
+    /// block.
     package static func validate(_ source: String) throws(ToolchainError) {
         let lines = source.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let subject = lines.first ?? ""
@@ -34,7 +35,9 @@ package enum CommitMessage {
                       options: .regularExpression,
                   ) != nil
               }) else {
-            throw .invalidCommit("Add a final Signed-off-by trailer with your name and email.")
+            throw .invalidCommit(
+                "Add your Signed-off-by name and email to the final trailer block.",
+            )
         }
         guard lines[2 ..< start].contains(where: {
             !$0.trimmingCharacters(in: .whitespaces).isEmpty

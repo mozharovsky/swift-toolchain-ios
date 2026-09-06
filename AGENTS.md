@@ -63,7 +63,8 @@ those recipes land. A source-only validation result is not proof of a rebuilt co
 Commit subjects and pull request titles use `type(scope): subject` and contain fewer than 72
 characters. Allowed types are `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `ci`, `build`, and
 `chore`. Scopes are `compiler`, `backend`, `bridge`, `sdk`, `macros`, `tools`, `ci`, and `docs`.
-Each commit explains why the change is needed and carries a final `Signed-off-by` trailer.
+Each commit explains why the change is needed and includes `Signed-off-by` in its final trailer block.
+Other trailers may follow the sign-off within that block.
 
 Use small stacked changes through `gh stack` when publishing a pull request stack. Every branch
 must pass its applicable checks. A human performs merges. Follow the pull request template.
