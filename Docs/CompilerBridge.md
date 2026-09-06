@@ -18,7 +18,10 @@ message and marks the process's compiler session nonreusable.
 
 All three operations share one mutex because the upstream libraries retain global state. Separate
 threads may call the bridge, but their compiler operations execute in sequence. Consumers must not
-bypass that sequence by calling Swift or LLD directly at the same time.
+bypass that sequence by calling Swift or LLD directly at the same time. When bundled macros are
+enabled, submit compiler work from a worker queue and keep the main queue available. Macro callbacks
+synchronously enter the upstream server on its required main actor. Blocking the main queue while
+waiting for another compiler call can prevent those callbacks from completing.
 
 A nonzero exit code can be an ordinary source or argument error. `canRunAgain` distinguishes a
 reusable failure from an invalidated native session. Once LLD reports a nonreusable result, later

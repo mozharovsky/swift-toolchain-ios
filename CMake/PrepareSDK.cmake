@@ -1,0 +1,80 @@
+include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
+if(NOT EXISTS "${TOOLCHAIN_SDK_ARCHIVE}")
+  message(FATAL_ERROR "Provide the checksum-pinned SDK archive before packaging.")
+endif()
+string(JSON expected GET "${TOOLCHAIN_INPUTS}" sdk sha256)
+file(SHA256 "${TOOLCHAIN_SDK_ARCHIVE}" actual)
+if(NOT actual STREQUAL expected)
+  message(FATAL_ERROR "The SDK archive checksum does not match Toolchain.lock.json.")
+endif()
+string(JSON sdk_version GET "${TOOLCHAIN_INPUTS}" sdk version)
+set(extraction "${TOOLCHAIN_PACKAGE_WORK}/SDKArchive")
+file(MAKE_DIRECTORY "${extraction}")
+file(ARCHIVE_EXTRACT INPUT "${TOOLCHAIN_SDK_ARCHIVE}" DESTINATION "${extraction}")
+set(sdk_source "${extraction}/${sdk_version}.artifactbundle/${sdk_version}/${TOOLCHAIN_PROGRAM_TARGET}")
+if(NOT EXISTS "${sdk_source}/swift-sdk.json")
+  message(FATAL_ERROR "The SDK archive lacks its declared target metadata.")
+endif()
+file(READ "${sdk_source}/swift-sdk.json" sdk_metadata)
+string(JSON sdk_path GET "${sdk_metadata}" targetTriples "${TOOLCHAIN_PROGRAM_TARGET}" sdkRootPath)
+string(JSON resources_path GET "${sdk_metadata}" targetTriples "${TOOLCHAIN_PROGRAM_TARGET}" swiftStaticResourcesPath)
+if(NOT sdk_path STREQUAL "WASI.sdk" OR NOT resources_path STREQUAL "swift.xctoolchain/usr/lib/swift_static")
+  message(FATAL_ERROR "The SDK payload layout needs a reviewed packaging update.")
+endif()
+set(framework "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/SwiftCompilerSDK.framework")
+set(payload "${framework}/Payload")
+file(MAKE_DIRECTORY "${framework}/Headers" "${payload}/swift.xctoolchain/usr/lib")
+file(COPY "${sdk_source}/WASI.sdk" DESTINATION "${payload}" PATTERN ".DS_Store" EXCLUDE)
+file(COPY "${sdk_source}/${resources_path}" DESTINATION "${payload}/swift.xctoolchain/usr/lib"
+  PATTERN ".DS_Store" EXCLUDE)
+file(WRITE "${payload}/Compatibility.json"
+  "{\n  \"schemaVersion\": 1,\n  \"swiftVersion\": \"${TOOLCHAIN_SWIFT_VERSION}\",\n"
+  "  \"compilerCommit\": \"${TOOLCHAIN_swift_REVISION}\",\n"
+  "  \"target\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n  \"revision\": \"${sdk_version}\"\n}\n")
+
+# Xcode strips serialized native-module filenames even when they are guest compiler input data.
+set(modules "[]")
+set(index 0)
+file(GLOB_RECURSE module_files LIST_DIRECTORIES FALSE "${payload}/*.swiftmodule")
+list(SORT module_files)
+foreach(module IN LISTS module_files)
+  file(RELATIVE_PATH path "${payload}" "${module}")
+  string(REGEX REPLACE "\\.swiftmodule$" ".compilerdata" encoded "${path}")
+  file(SHA256 "${module}" checksum)
+  execute_process(COMMAND /usr/bin/base64 -i "${module}" -o "${payload}/${encoded}"
+    COMMAND_ERROR_IS_FATAL ANY)
+  file(REMOVE "${module}")
+  toolchain_json_string(path_json "${path}")
+  toolchain_json_string(encoded_json "${encoded}")
+  string(JSON record SET "{}" path "${path_json}")
+  string(JSON record SET "${record}" encodedPath "${encoded_json}")
+  string(JSON record SET "${record}" sha256 "\"${checksum}\"")
+  string(JSON modules SET "${modules}" ${index} "${record}")
+  math(EXPR index "${index} + 1")
+endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/PrepareNotices.cmake")
+file(GLOB_RECURSE payload_files LIST_DIRECTORIES FALSE "${payload}/*")
+list(SORT payload_files)
+set(identity_input "")
+foreach(file IN LISTS payload_files)
+  file(RELATIVE_PATH path "${payload}" "${file}")
+  file(SHA256 "${file}" checksum)
+  string(APPEND identity_input "${path} ${checksum}\n")
+endforeach()
+string(SHA256 identity "${identity_input}")
+file(WRITE "${payload}/Materialization.json"
+  "{\"schemaVersion\":1,\"identity\":\"${identity}\",\"modules\":${modules}}\n")
+configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.h.in"
+  "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h" @ONLY)
+configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.m.in"
+  "${TOOLCHAIN_PACKAGE_WORK}/SDKBundle.m" @ONLY)
+execute_process(COMMAND xcrun --sdk iphoneos --show-sdk-path
+  OUTPUT_VARIABLE sdk OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND xcrun --sdk iphoneos clang -target "${TOOLCHAIN_COMPILER_HOST}"
+  -isysroot "${sdk}" -fobjc-arc -dynamiclib -framework Foundation
+  "-I${TOOLCHAIN_PACKAGE_WORK}" "${TOOLCHAIN_PACKAGE_WORK}/SDKBundle.m"
+  -install_name "@rpath/SwiftCompilerSDK.framework/SwiftCompilerSDK"
+  -o "${framework}/SwiftCompilerSDK" COMMAND_ERROR_IS_FATAL ANY)
+toolchain_framework_module("${framework}" SwiftCompilerSDK "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h")
+toolchain_framework_plist("${framework}" SwiftCompilerSDK)
+message(STATUS "Prepared the verified WASM SDK and ${index} serialized module inputs.")

@@ -9,6 +9,7 @@ struct ToolchainCommand: ParsableCommand {
         abstract: "Validate source inputs and repository metadata for the iOS Swift toolchain.",
         subcommands: [
             VerifyCommand.self,
+            VerifyArtifactManifestCommand.self,
             CheckCommitCommand.self,
             CheckHistoryCommand.self,
             CheckRepositoryCommand.self,

@@ -12,3 +12,8 @@ removed from the resulting library. Those paths need a separate artifact audit.
 The producer applies exact line hunks to the checksum-pinned source archive after extraction. A changed patch receives a
 different source identity so it cannot silently reuse an earlier patched tree. Swift's license and
 Runtime Library Exception are retained in `Licenses/Swift.txt`.
+
+`MainActorMacroEntry.patch` renames the C entry of the same pinned Swift source. The producer applies
+it only to a copied macro-server file in the macro build directory. The native adapter exports the
+original name and invokes the upstream handler on its required main actor. Compiler sources and
+compiler output identities remain independent of this macro-only patch.

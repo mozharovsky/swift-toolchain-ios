@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "sdkVersion": "swift-6.3.2-RELEASE_wasm",
+  "sources": [
+    {
+      "component": "swift-foundation",
+      "repository": "https://github.com/swiftlang/swift-foundation",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "dbacc67779dc0a41ddc9493acbaa332d76c9fb03",
+      "sourcePath": "LICENSE.md",
+      "path": "TargetLibraries/swift-foundation/LICENSE.md",
+      "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+      "upstreamTextSHA256": "2245a990b635558be210fb3eb4f8a6f7a49aebc0fefbf5859146a65ddc7ddcf3"
+    },
+    {
+      "component": "swift-foundation",
+      "repository": "https://github.com/swiftlang/swift-foundation",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "dbacc67779dc0a41ddc9493acbaa332d76c9fb03",
+      "sourcePath": "NOTICE.txt",
+      "path": "TargetLibraries/swift-foundation/NOTICE.txt",
+      "sha256": "c2e757911b86a76230099804831d8d847a865e88b5912171627492a7a49f0456",
+      "upstreamTextSHA256": "c2e757911b86a76230099804831d8d847a865e88b5912171627492a7a49f0456"
+    },
+    {
+      "component": "swift-corelibs-foundation",
+      "repository": "https://github.com/swiftlang/swift-corelibs-foundation",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "6da8413b9a088eb59badcf0665aa73116db51edf",
+      "sourcePath": "LICENSE",
+      "path": "TargetLibraries/swift-corelibs-foundation/LICENSE",
+      "sha256": "167beb36f181bd163c93c6feb45c68e5f9462fe1af55b278f7bfd1df20e673a3",
+      "upstreamTextSHA256": "0ca84095d1de77cad1a866ebbad28f8db98a0826c6055d92b0608c5baa1643e2"
+    },
+    {
+      "component": "swift-foundation-icu",
+      "repository": "https://github.com/swiftlang/swift-foundation-icu",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "e29ee41079d35eae68d98a7479864a19f2928d84",
+      "sourcePath": "LICENSE.md",
+      "path": "TargetLibraries/swift-foundation-icu/LICENSE.md",
+      "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+      "upstreamTextSHA256": "2245a990b635558be210fb3eb4f8a6f7a49aebc0fefbf5859146a65ddc7ddcf3"
+    },
+    {
+      "component": "swift-testing",
+      "repository": "https://github.com/swiftlang/swift-testing",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "70eff261d7f462cad1fff51e05bcc74aa0b0f420",
+      "sourcePath": "LICENSE.txt",
+      "path": "TargetLibraries/swift-testing/LICENSE.txt",
+      "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+      "upstreamTextSHA256": "11875c32f8de06e40b25b9e1dc78776baad9810032601c5325db6234c86d71e9"
+    },
+    {
+      "component": "swift-testing",
+      "repository": "https://github.com/swiftlang/swift-testing",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "70eff261d7f462cad1fff51e05bcc74aa0b0f420",
+      "sourcePath": "NOTICE.txt",
+      "path": "TargetLibraries/swift-testing/NOTICE.txt",
+      "sha256": "154f56b19c3867673364d63615e24c745de869fe54be99852ab2cce9f92c27e6",
+      "upstreamTextSHA256": "154f56b19c3867673364d63615e24c745de869fe54be99852ab2cce9f92c27e6"
+    },
+    {
+      "component": "swift-corelibs-xctest",
+      "repository": "https://github.com/swiftlang/swift-corelibs-xctest",
+      "reference": "swift-6.3.2-RELEASE",
+      "licenseRevision": "18494ea84411109c3bc124fe94d93ac2521b30d4",
+      "sourcePath": "LICENSE",
+      "path": "TargetLibraries/swift-corelibs-xctest/LICENSE",
+      "sha256": "167beb36f181bd163c93c6feb45c68e5f9462fe1af55b278f7bfd1df20e673a3",
+      "upstreamTextSHA256": "0ca84095d1de77cad1a866ebbad28f8db98a0826c6055d92b0608c5baa1643e2"
+    },
+    {
+      "component": "swift-collections",
+      "repository": "https://github.com/apple/swift-collections",
+      "reference": "1.1.6",
+      "licenseRevision": "c11818f3cae0780656baa430b49e7f163f08dffd",
+      "sourcePath": "LICENSE.txt",
+      "path": "TargetLibraries/swift-collections/LICENSE.txt",
+      "sha256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
+      "upstreamTextSHA256": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "LICENSE",
+      "path": "TargetLibraries/wasi-libc/LICENSE",
+      "sha256": "2711a8b5a5cdfef0e639f96c1aca12ae23d7d64a02d0507f1bdf14d2b27bbc3a",
+      "upstreamTextSHA256": "2711a8b5a5cdfef0e639f96c1aca12ae23d7d64a02d0507f1bdf14d2b27bbc3a"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "fts/musl-fts/COPYING",
+      "path": "TargetLibraries/wasi-libc/fts/musl-fts/COPYING",
+      "sha256": "55af87e4017668f54467a3380e7ebbac5e672d8c763bfe95e6fc882a6fdc4046",
+      "upstreamTextSHA256": "55af87e4017668f54467a3380e7ebbac5e672d8c763bfe95e6fc882a6fdc4046"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "fts/musl-fts/NOTICE.wasi-libc.md",
+      "path": "TargetLibraries/wasi-libc/fts/musl-fts/NOTICE.wasi-libc.md",
+      "sha256": "6aa429513e3e883111aceab81f80f9da38613b7f74c966393ff33470c93a9daa",
+      "upstreamTextSHA256": "6aa429513e3e883111aceab81f80f9da38613b7f74c966393ff33470c93a9daa"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "libc-bottom-half/cloudlibc/LICENSE",
+      "path": "TargetLibraries/wasi-libc/libc-bottom-half/cloudlibc/LICENSE",
+      "sha256": "c8b789cf5a746611e6300a0cc7750dbf92b61912a709d04e639245f7290656d0",
+      "upstreamTextSHA256": "c8b789cf5a746611e6300a0cc7750dbf92b61912a709d04e639245f7290656d0"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "libc-top-half/musl/COPYRIGHT",
+      "path": "TargetLibraries/wasi-libc/libc-top-half/musl/COPYRIGHT",
+      "sha256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+      "upstreamTextSHA256": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "tools/wasi-headers/LICENSE",
+      "path": "TargetLibraries/wasi-libc/tools/wasi-headers/LICENSE",
+      "sha256": "a6c48161a09acc75a0e25503bab66a731eb5fba5392ed4bb4743e4ba5085327a",
+      "upstreamTextSHA256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5"
+    },
+    {
+      "component": "libxml2",
+      "repository": "https://github.com/GNOME/libxml2",
+      "reference": "v2.11.5",
+      "licenseRevision": "2b998a4ffbdfea04fc6a620721abc690a15743af",
+      "sourcePath": "Copyright",
+      "path": "TargetLibraries/libxml2/Copyright",
+      "sha256": "c5c63674f8a83c4d2e385d96d1c670a03cb871ba2927755467017317878574bd",
+      "upstreamTextSHA256": "c5c63674f8a83c4d2e385d96d1c670a03cb871ba2927755467017317878574bd"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "LICENSE-APACHE",
+      "path": "TargetLibraries/wasi-libc/LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "upstreamTextSHA256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "LICENSE-APACHE-LLVM",
+      "path": "TargetLibraries/wasi-libc/LICENSE-APACHE-LLVM",
+      "sha256": "a6c48161a09acc75a0e25503bab66a731eb5fba5392ed4bb4743e4ba5085327a",
+      "upstreamTextSHA256": "268872b9816f90fd8e85db5a28d33f8150ebb8dd016653fb39ef1f94f2686bc5"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "LICENSE-MIT",
+      "path": "TargetLibraries/wasi-libc/LICENSE-MIT",
+      "sha256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3",
+      "upstreamTextSHA256": "23f18e03dc49df91622fe2a76176497404e46ced8a715d9d2b67a7446571cca3"
+    },
+    {
+      "component": "wasi-libc",
+      "repository": "https://github.com/WebAssembly/wasi-libc",
+      "reference": "wasi-sdk-27",
+      "licenseRevision": "3f7eb4c7d6ede4dde3c4bffa6ed14e8d656fe93f",
+      "sourcePath": "dlmalloc/src/malloc.c",
+      "path": "TargetLibraries/wasi-libc/dlmalloc-NOTICE.txt",
+      "sha256": "c9c0f4879df94f00413079bdd2d4730a292d6dd0e0886dc0cedc6559d3a36e35",
+      "sourceLines": "1-11",
+      "upstreamTextSHA256": "623aece9a051d3e1c11989e9a9b802c63b9e2d91d67171c730b622bb80e1befe"
+    },
+    {
+      "component": "unicode-icu",
+      "repository": "https://github.com/unicode-org/icu",
+      "reference": "release-76-1",
+      "licenseRevision": "8eca245c7484ac6cc179e3e5f7c1ea7680810f39",
+      "sourcePath": "LICENSE",
+      "path": "TargetLibraries/unicode-icu/LICENSE",
+      "sha256": "01edac20612b1e590c1c1cfb02b7218c6adc7b0a944eda7a1e03aeee10725aed",
+      "upstreamTextSHA256": "01edac20612b1e590c1c1cfb02b7218c6adc7b0a944eda7a1e03aeee10725aed"
+    }
+  ]
+}

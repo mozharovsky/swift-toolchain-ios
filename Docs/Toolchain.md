@@ -7,8 +7,8 @@ These guest archives are compiler input data. They are not arm64 libraries.
 
 `Toolchain.lock.json` pins source commits and the official SDK archive. The verifier checks source
 and archive
-identities and the target relationship. CMake owns source preparation and the explicit native build
-graph. Artifact packaging and publication remain separate work.
+identities and the target relationship. CMake owns source preparation, native builds, and explicit
+consumer artifact packaging. Publication remains a separate operation.
 
 ## Producer and consumer
 
@@ -31,7 +31,7 @@ support or App Store approval is established by this repository's maintenance te
 
 ## Next implementation work
 
-Validate a complete native build from the pinned source archives, then prepare versioned release
-artifacts. The bridge and configuration recipes are checked in with bounded contract checks. Keep
-full upstream trees,
-SDK downloads, native build products, and release archives in ignored storage.
+Native build and packaging recipes are checked in with bounded contract checks. A packaging run
+produces local XCFramework archives and an artifact manifest. Application execution and release
+publication remain separate validation steps. Keep upstream trees, SDK downloads, native build
+products, and release archives in ignored storage.

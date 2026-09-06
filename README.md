@@ -38,6 +38,7 @@ compiler adapter live in `Sources/CompilerBridge`.
 Compiler source checkouts, SDK contents, build directories, and release archives belong in ignored
 storage. [Building](Docs/Building.md) describes source preparation and explicit native builds.
 [Compiler bridge](Docs/CompilerBridge.md) describes ownership and recovery.
+[Consumer artifacts](Docs/Artifacts.md) describes macro preparation, SDK packaging, and ZIP validation.
 [Toolchain boundaries](Docs/Toolchain.md) describes the intended producer and artifact split.
 
 ## Licensing

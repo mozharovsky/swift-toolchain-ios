@@ -4,6 +4,8 @@ import Foundation
 package enum ToolchainError: Error, Equatable, CustomStringConvertible {
     /// Configuration failures identify the input that needs a reviewed correction.
     case invalidConfiguration(String)
+    /// Artifact failures reject unsafe paths and incompatible release metadata.
+    case invalidArtifact(String)
     /// Commit failures prevent hooks and CI from accepting incomplete history metadata.
     case invalidCommit(String)
     /// File inventory failures keep unsupported artifacts out of source control.
@@ -14,7 +16,8 @@ package enum ToolchainError: Error, Equatable, CustomStringConvertible {
     /// ArgumentParser presents actionable text without exposing a Foundation error wrapper.
     package var description: String {
         switch self {
-        case let .invalidConfiguration(message), let .invalidCommit(message),
+        case let .invalidConfiguration(message), let .invalidArtifact(message),
+             let .invalidCommit(message),
              let .invalidRepository(message), let .unreadableFile(message):
             message
         }

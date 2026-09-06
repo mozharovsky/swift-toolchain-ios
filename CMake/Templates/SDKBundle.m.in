@@ -1,0 +1,4 @@
+#import "SwiftCompilerSDK.h"
+
+@implementation SwiftCompilerSDKBundle
+@end
