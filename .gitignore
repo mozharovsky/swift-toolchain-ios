@@ -1,0 +1,10 @@
+.DS_Store
+.build/
+.cache/
+.swiftpm/
+Artifacts/
+DerivedData/
+Upstreams/
+*.xcarchive/
+*.xcodeproj/
+*.xcworkspace/

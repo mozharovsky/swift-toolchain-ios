@@ -1,0 +1,11 @@
+--swiftversion 6.3
+--indent 4
+--linebreaks lf
+--maxwidth 100
+--semicolons never
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+--disable opaqueGenericParameters,redundantFileprivate,wrapMultilineStatementBraces
+--exclude .build,.cache,.swiftpm,Upstreams,Artifacts,DerivedData

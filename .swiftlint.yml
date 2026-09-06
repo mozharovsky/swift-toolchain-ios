@@ -1,0 +1,59 @@
+cache_path: .cache/swiftlint
+
+excluded:
+  - .build
+  - .cache
+  - .swiftpm
+  - Upstreams
+  - Artifacts
+  - DerivedData
+
+only_rules:
+  - closing_brace
+  - colon
+  - comma
+  - force_cast
+  - force_try
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - leading_whitespace
+  - line_length
+  - missing_docs
+  - opening_brace
+  - operator_whitespace
+  - return_arrow_whitespace
+  - statement_position
+  - trailing_comma
+  - trailing_newline
+  - trailing_semicolon
+  - trailing_whitespace
+  - unowned_variable_capture
+  - vertical_whitespace
+
+force_cast: error
+force_try: error
+force_unwrapping: error
+implicitly_unwrapped_optional: error
+unowned_variable_capture: error
+
+trailing_comma:
+  mandatory_comma: true
+
+line_length:
+  warning: 100
+  error: 100
+  ignores_comments: false
+  ignores_urls: true
+
+missing_docs:
+  error:
+    - open
+    - public
+    - package
+    - internal
+    - fileprivate
+    - private
+  excludes_extensions: false
+  excludes_inherited_types: false
+  excludes_trivial_init: true
+  evaluate_effective_access_control_level: true

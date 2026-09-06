@@ -1,0 +1,37 @@
+[tools]
+shellcheck = "0.11.0"
+shfmt = "3.14.0"
+swiftformat = { version = "0.58.7", rename_exe = "swiftformat" }
+
+[tools.swiftlint]
+version = "0.59.1"
+url = "https://github.com/realm/SwiftLint/releases/download/{{ version }}/SwiftLintBinary.artifactbundle.zip"
+strip_components = 0
+bin_path = "SwiftLintBinary.artifactbundle/swiftlint-{{ version }}-{{ os(linux='linux-gnu', macos='macos') }}/bin"
+checksum = "sha256:b9f915a58a818afcc66846740d272d5e73f37baf874e7809ff6f246ea98ad8a2"
+
+[tool_alias]
+swiftlint = "http:swiftlint"
+
+[settings]
+use_versions_host = false
+use_versions_host_track = false
+
+[tasks.check]
+description = "Run the bounded repository checks in sequence."
+run = "Scripts/check.sh"
+
+[tasks.quality]
+description = "Check authored Swift and shell source without changing files."
+run = "Scripts/quality.sh"
+
+[tasks.format]
+description = "Apply the pinned Swift and shell formatting rules."
+run = [
+  "swiftformat . --cache ignore",
+  "shfmt -w -i 4 -ci Scripts/*.sh Scripts/Hooks/*",
+]
+
+[tasks.docs]
+description = "Build both DocC catalogs with warnings treated as errors."
+run = "Scripts/docs.sh"
