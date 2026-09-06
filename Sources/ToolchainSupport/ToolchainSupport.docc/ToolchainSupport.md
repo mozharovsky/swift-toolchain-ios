@@ -15,6 +15,12 @@ artifacts from Git's source inventory. Commit validation is shared by the local 
 - ``UpstreamSource``
 - ``SDKArchive``
 
+### Consumer artifacts
+
+- ``ArtifactManifest``
+- ``CompilerArtifact``
+- ``MacroBuildSupport``
+
 ### Repository checks
 
 - ``CommitMessage``

@@ -1,0 +1,4 @@
+set(TOOLCHAIN_COMPILER_SUPPORT_MODULES
+  SwiftBasicFormat SwiftCompilerPluginMessageHandling SwiftDiagnostics SwiftIDEUtils
+  SwiftIfConfig SwiftLexicalLookup SwiftOperators SwiftParser SwiftParserDiagnostics
+  SwiftSyntax SwiftSyntaxBuilder SwiftSyntaxMacroExpansion SwiftSyntaxMacros)

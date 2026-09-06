@@ -14,3 +14,21 @@ target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}
 target_link_libraries(SwiftCompilerBridge PRIVATE swiftFrontendTool lldWasm lldCommon)
 set_target_properties(SwiftCompilerBridge PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+
+# A post-link manifest cannot silently bless a cache that packaging reads without a rebuild.
+add_custom_command(TARGET SwiftCompilerBridge POST_BUILD
+  COMMAND "${CMAKE_COMMAND}"
+    "-DTOOLCHAIN_REPOSITORY_ROOT=${TOOLCHAIN_REPOSITORY_ROOT}"
+    "-DTOOLCHAIN_SWIFT_BUILD=${CMAKE_BINARY_DIR}"
+    -P "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")
+set_property(TARGET SwiftCompilerBridge APPEND PROPERTY LINK_DEPENDS
+  "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/CacheManifest.cmake"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")
+
+# Module metadata may change independently of executable bytes and must refresh the cache receipt.
+include("${TOOLCHAIN_REPOSITORY_ROOT}/CMake/CacheManifest.cmake")
+toolchain_native_files(receipt_inputs "${CMAKE_BINARY_DIR}")
+list(REMOVE_ITEM receipt_inputs "lib/libSwiftCompilerBridge.dylib")
+foreach(input IN LISTS receipt_inputs)
+  set_property(TARGET SwiftCompilerBridge APPEND PROPERTY LINK_DEPENDS "${CMAKE_BINARY_DIR}/${input}")
+endforeach()

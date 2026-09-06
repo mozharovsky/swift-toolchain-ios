@@ -28,10 +28,19 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME CompilerBridgeContract COMMAND CompilerBridgeContractTests)
   if(APPLE)
+    add_executable(MacroCallbackThreadingTests
+      Sources/MacroBridge/MacroEntry.cpp Tests/MacroBridgeTests/ThreadingTests.cpp)
+    target_include_directories(MacroCallbackThreadingTests PRIVATE Sources/MacroBridge)
+    target_compile_options(MacroCallbackThreadingTests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+    add_test(NAME MacroCallbackThreading COMMAND MacroCallbackThreadingTests)
+    set_tests_properties(MacroCallbackThreading PROPERTIES TIMEOUT 20)
     find_program(TOOLCHAIN_XCRUN NAMES xcrun REQUIRED)
     file(GLOB_RECURSE native_sources CONFIGURE_DEPENDS
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.h"
+      "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.cpp"
+      "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.h"
+      "${CMAKE_SOURCE_DIR}/Tests/MacroBridgeTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/CompilerBridgeTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/CompilerBridgeTests/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/CompilerBridgeTests/*.c")
@@ -53,6 +62,13 @@ if(BUILD_TESTING)
       "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
       "-DCMAKE_PROJECT_Swift_INCLUDE=${CMAKE_SOURCE_DIR}/CMake/IncludeBridge.cmake"
       "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}")
+  add_test(NAME ArtifactMetadata
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ArtifactMetadata.cmake")
+  add_test(NAME ProducerCacheManifest
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/cache-manifest-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/CacheManifest.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()

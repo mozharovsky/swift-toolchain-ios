@@ -32,6 +32,8 @@ __attribute__((visibility("default"))) uint32_t swift_compiler_abi_version(void)
 
 /// Trusted frontend arguments are borrowed until this synchronous call returns.
 /// Ordinary source errors are reusable, while fatal compiler failures can terminate the process.
+/// Bundled macros may call the main queue, so clients keep it available while awaiting worker
+/// calls.
 __attribute__((visibility("default"))) SwiftCompilerResult
 swift_compiler_frontend(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
 

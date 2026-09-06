@@ -7,3 +7,6 @@ They do not fetch upstream sources, build the compiler, or publish releases.
 `verify` validates source and SDK identities. `check-commit-message` reads Git's message file.
 `check-history` consumes complete NUL-separated commit messages. `check-repository` consumes
 NUL-separated repository-relative paths.
+
+`verify-artifact-manifest` checks release identities, archive basenames, required components, and
+digest formatting. It does not inspect ZIP contents or execute a native compiler.

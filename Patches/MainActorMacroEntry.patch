@@ -1,0 +1,5 @@
+--- a/InProcPluginServer.swift
++++ b/InProcPluginServer.swift
+@@ -37 +37 @@
+-@_cdecl("swift_inproc_plugins_handle_message")
++@_cdecl("swift_toolchain_macro_message_on_main_actor")

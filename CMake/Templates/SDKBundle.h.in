@@ -1,0 +1,5 @@
+#import <Foundation/Foundation.h>
+
+/// A bundle anchor lets embedding packages locate immutable compiler inputs after framework copying.
+@interface SwiftCompilerSDKBundle : NSObject
+@end

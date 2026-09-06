@@ -22,3 +22,4 @@ set(CLANG_INCLUDE_TESTS OFF CACHE BOOL "Clang tests are outside this library bui
 set(LLVM_ENABLE_ZSTD OFF CACHE BOOL "The profile needs no compressed debug sections." FORCE)
 set(LLVM_ENABLE_LIBXML2 OFF CACHE BOOL "The profile does not need LLVM's optional XML tools." FORCE)
 set(LLVM_ENABLE_LIBEDIT OFF CACHE BOOL "The profile has no terminal editor dependency." FORCE)
+set(LLVM_APPEND_VC_REV OFF CACHE BOOL "Archive inputs use manifest provenance instead of a parent Git checkout." FORCE)
