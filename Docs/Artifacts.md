@@ -46,6 +46,11 @@ The SDK archive must match the exact SHA-256 in `Toolchain.lock.json`. Packaging
 installed Apple SDK as guest input. Xcode supplies the SDK only when compiling native libraries
 and the small resource anchor.
 
+The first artifact schema requires the complete current component set, including macro build
+support. Earlier local candidates created while this producer was under development must be
+regenerated. They were not published release manifests. The toolchain input lock and notice index
+have independent schemas and are not decoded as artifact manifests.
+
 ## Layout and validation
 
 `Frameworks` contains device frameworks with rewritten install names. `XCFrameworks` contains their

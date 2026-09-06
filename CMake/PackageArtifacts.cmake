@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactInputs.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
+find_program(TOOLCHAIN_ARCHIVE_TOOL NAMES ditto PATHS /usr/bin NO_DEFAULT_PATH REQUIRED)
 if(NOT DEFINED TOOLCHAIN_ARTIFACT_OUTPUT OR NOT IS_ABSOLUTE "${TOOLCHAIN_ARTIFACT_OUTPUT}")
   message(FATAL_ERROR "Set TOOLCHAIN_ARTIFACT_OUTPUT to a new absolute ignored output directory.")
 endif()
@@ -25,7 +26,12 @@ set(TOOLCHAIN_PACKAGE_WORK "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work")
 file(MAKE_DIRECTORY "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks"
   "${TOOLCHAIN_ARTIFACT_OUTPUT}/XCFrameworks" "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives"
   "${TOOLCHAIN_PACKAGE_WORK}")
-file(GLOB libraries "${TOOLCHAIN_COMPILER_LIBRARIES}/*.dylib")
+set(libraries "")
+foreach(input IN LISTS native_files)
+  if(input MATCHES "^lib/swift/host/compiler/.*\.dylib$")
+    list(APPEND libraries "${TOOLCHAIN_SWIFT_BUILD}/${input}")
+  endif()
+endforeach()
 list(SORT libraries)
 list(PREPEND libraries "${TOOLCHAIN_SWIFT_BUILD}/lib/libSwiftCompilerBridge.dylib")
 foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
@@ -69,7 +75,7 @@ foreach(name IN LISTS names)
   execute_process(COMMAND xcodebuild -create-xcframework -framework "${framework}"
     -output "${xcframework}" COMMAND_ERROR_IS_FATAL ANY)
   set(archive "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives/${name}.zip")
-  execute_process(COMMAND /usr/bin/ditto -c -k --keepParent --norsrc "${xcframework}" "${archive}"
+  execute_process(COMMAND "${TOOLCHAIN_ARCHIVE_TOOL}" -c -k --keepParent --norsrc "${xcframework}" "${archive}"
     COMMAND_ERROR_IS_FATAL ANY)
   file(SHA256 "${archive}" checksum)
   file(SIZE "${archive}" bytes)

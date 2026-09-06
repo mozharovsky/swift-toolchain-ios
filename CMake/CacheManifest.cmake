@@ -1,11 +1,12 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/CompilerSupportModules.cmake")
 
 # Input hashes describe the producer code whose outputs a later packaging run can consume.
 function(toolchain_native_identity output)
   set(paths Toolchain.lock.json Patches/DisableImmediateExecution.patch
     CMake/Profiles/Common.cmake CMake/Profiles/HostTools.cmake CMake/Profiles/LLVM-IOS.cmake
     CMake/Profiles/CmarkIOS.cmake CMake/Profiles/SwiftIOS.cmake CMake/NativeLibraries.cmake
-    CMake/IncludeBridge.cmake Sources/CompilerBridge/CMakeLists.txt
+    CMake/IncludeBridge.cmake CMake/CompilerSupportModules.cmake Sources/CompilerBridge/CMakeLists.txt
     Sources/CompilerBridge/SwiftCompilerBridge.cpp Sources/CompilerBridge/SwiftCompilerBridge.h
     Sources/CompilerBridge/NativeBackend.cpp Sources/CompilerBridge/CompilerBackend.h)
   set(identity "")
@@ -19,9 +20,11 @@ endfunction()
 
 # File inventories reject extra cache entries instead of silently adopting a substituted library.
 function(toolchain_native_files output root)
-  file(GLOB files RELATIVE "${root}" "${root}/lib/swift/host/compiler/*.dylib"
-    "${root}/_deps/compilerswiftsyntax-build/Sources/*/*.swiftmodule")
-  list(APPEND files "lib/libSwiftCompilerBridge.dylib")
+  set(files "lib/libSwiftCompilerBridge.dylib")
+  foreach(module IN LISTS TOOLCHAIN_COMPILER_SUPPORT_MODULES)
+    list(APPEND files "lib/swift/host/compiler/lib_Compiler${module}.dylib"
+      "_deps/compilerswiftsyntax-build/Sources/${module}/${module}.swiftmodule")
+  endforeach()
   list(SORT files)
   set(${output} "${files}" PARENT_SCOPE)
 endfunction()

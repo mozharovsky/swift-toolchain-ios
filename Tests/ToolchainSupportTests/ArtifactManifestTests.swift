@@ -57,6 +57,22 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Development inputs must not select another archive or omit its transfer and integrity
+    /// identity.
+    @Test(arguments: ["archive", "size", "checksum"])
+    func rejectsInvalidMacroBuildSupport(_ field: String) throws {
+        let manifest = try Self.modified { object in
+            var support = try #require(object["macroBuildSupport"] as? [String: Any])
+            switch field {
+            case "archive": support["archive"] = "../Other.zip"
+            case "size": support["archiveBytes"] = 0
+            default: support["checksum"] = "invalid"
+            }
+            object["macroBuildSupport"] = support
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// Fixture mutation preserves the decoder boundary used by release manifest consumers.
     private static func modified(_ edit: (inout [String: Any]) throws -> Void) throws
         -> ArtifactManifest {

@@ -24,3 +24,11 @@ add_custom_command(TARGET SwiftCompilerBridge POST_BUILD
 set_property(TARGET SwiftCompilerBridge APPEND PROPERTY LINK_DEPENDS
   "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/CacheManifest.cmake"
   "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")
+
+# Module metadata may change independently of executable bytes and must refresh the cache receipt.
+include("${TOOLCHAIN_REPOSITORY_ROOT}/CMake/CacheManifest.cmake")
+toolchain_native_files(receipt_inputs "${CMAKE_BINARY_DIR}")
+list(REMOVE_ITEM receipt_inputs "lib/libSwiftCompilerBridge.dylib")
+foreach(input IN LISTS receipt_inputs)
+  set_property(TARGET SwiftCompilerBridge APPEND PROPERTY LINK_DEPENDS "${CMAKE_BINARY_DIR}/${input}")
+endforeach()
