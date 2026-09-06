@@ -32,7 +32,8 @@ struct ConfigurationTests {
     func rejectsMutableRevisions(revision: String) throws {
         let source = UpstreamSource(
             name: "swift", repository: "https://github.com/swiftlang/swift.git",
-            revision: revision, license: "Apache-2.0 WITH Swift-exception",
+            revision: revision, archiveSHA256: String(repeating: "a", count: 64),
+            license: "Apache-2.0 WITH Swift-exception",
         )
         #expect(throws: ToolchainError.self) { try source.validate() }
     }
@@ -46,7 +47,10 @@ struct ConfigurationTests {
     func rejectsCredentialURLs(repository: String) throws {
         let source = UpstreamSource(
             name: "source", repository: repository,
-            revision: String(repeating: "a", count: 40), license: "Apache-2.0",
+            revision: String(repeating: "a", count: 40), archiveSHA256: String(
+                repeating: "b",
+                count: 64,
+            ), license: "Apache-2.0",
         )
         #expect(throws: ToolchainError.self) { try source.validate() }
     }
@@ -68,6 +72,16 @@ struct ConfigurationTests {
             var sdk = try #require(object["sdk"] as? [String: Any])
             sdk[field] = "latest"
             object["sdk"] = sdk
+        }
+        #expect(throws: ToolchainError.self) { try configuration.validate() }
+    }
+
+    /// Native source preparation must not acquire an archive without a valid pinned digest.
+    @Test func rejectsInvalidSourceArchiveChecksum() throws {
+        let configuration = try Self.modified { object in
+            var sources = try #require(object["sources"] as? [[String: Any]])
+            sources[0]["archiveSHA256"] = "latest"
+            object["sources"] = sources
         }
         #expect(throws: ToolchainError.self) { try configuration.validate() }
     }

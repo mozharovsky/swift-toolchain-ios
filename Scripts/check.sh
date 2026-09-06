@@ -9,3 +9,4 @@ swift test
 swift run --skip-build toolchain verify
 git ls-files --cached --others --exclude-standard -z | swift run --skip-build toolchain check-repository
 Scripts/docs.sh
+Scripts/native-check.sh

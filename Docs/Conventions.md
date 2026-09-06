@@ -45,9 +45,10 @@ in Swift. Shell files pass ShellCheck and shfmt without suppressions added to ma
 
 `mise run check` is the local entry point. It runs checks in sequence so SwiftPM operations do not
 contend over one scratch directory. CI uses separate jobs for quality, Linux build and tests, macOS
-build and tests, documentation, and pull request commit metadata.
+build and tests, documentation, pull request commit metadata, and the native bridge contract.
 
-SwiftFormat, SwiftLint, ShellCheck, and shfmt use pinned versions and archive identities in `mise.lock`.
+SwiftFormat, SwiftLint, ShellCheck, shfmt, CMake, and Ninja use pinned versions and archive identities
+in `mise.lock`.
 The complete mise installation and download cache is retained together in CI. A tool cache hit must
 not depend on undeclared files outside that cache. Job timeouts bound a failure rather than hide
 repeated network retries.
@@ -57,8 +58,8 @@ explicit inputs, budgets, and release authorization. A reviewed build recipe and
 compiler build are separate results. Platform support requires execution evidence for that platform.
 
 The intended required check names are `Format and lint`, `Linux build and tests`, `macOS build and
-tests`, `Documentation`, and `Commit policy`. Repository rulesets are configured separately from the
-workflow files after these checks have run on GitHub. CodeRabbit configuration does not install or
+tests`, `Documentation`, `Commit policy`, and `Native bridge contract`. Repository rulesets are
+configured separately from the workflow files after these checks have run on GitHub. CodeRabbit configuration does not install or
 authorize the GitHub application.
 
 ## Contributions

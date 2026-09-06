@@ -8,31 +8,36 @@
       "name": "swift",
       "repository": "https://github.com/swiftlang/swift.git",
       "revision": "cd8d8ad0019e4e291906b311e0d25d7039cddc9c",
-      "license": "Apache-2.0 WITH Swift-exception"
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "7b67785f8969cc765ad2300e6350cce0196bbe4f0386e24cdf8ae7524cc310b9"
     },
     {
       "name": "llvm-project",
       "repository": "https://github.com/swiftlang/llvm-project.git",
       "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
-      "license": "Apache-2.0 WITH LLVM-exception"
+      "license": "Apache-2.0 WITH LLVM-exception",
+      "archiveSHA256": "70e6e342b9505d5cf912f3368620fe665eb8a177a1f5b843f31a253c1827d1c0"
     },
     {
       "name": "swift-syntax",
       "repository": "https://github.com/swiftlang/swift-syntax.git",
       "revision": "2b59c0c741e9184ab057fd22950b491076d42e91",
-      "license": "Apache-2.0 WITH Swift-exception"
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "93459f39912d4820f27fe31bed50bee62c66f79c0ab71bbac368c4b790d8d12b"
     },
     {
       "name": "swift-cmark",
       "repository": "https://github.com/swiftlang/swift-cmark.git",
       "revision": "924936d0427cb25a61169739a7660230bffa6ea6",
-      "license": "BSD-2-Clause AND MIT"
+      "license": "BSD-2-Clause AND MIT",
+      "archiveSHA256": "1c51659bd47c34df1c8976f893adc43ba039a98f6eac4fa95d53d1e08ba6072a"
     },
     {
       "name": "string-processing",
       "repository": "https://github.com/swiftlang/swift-experimental-string-processing.git",
       "revision": "efe8986824694c53fd5e94a4c634f20b3682baeb",
-      "license": "Apache-2.0 WITH Swift-exception"
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "aead577e21e3ec1d00cd3bd0fcc21af6df1037243d4d3890d20cd1c10dc825de"
     }
   ],
   "sdk": {

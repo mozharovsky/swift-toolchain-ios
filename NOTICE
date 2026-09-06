@@ -1,0 +1,7 @@
+The compiler patch modifies source from the Swift project.
+Copyright belongs to Apple Inc. and the Swift project authors.
+Swift is distributed under Apache-2.0 with its Runtime Library Exception.
+The complete terms are retained in Licenses/Swift.txt.
+
+Upstream compiler source trees and SDK archives are external build inputs.
+Future binary releases must include the notices for every component they contain.

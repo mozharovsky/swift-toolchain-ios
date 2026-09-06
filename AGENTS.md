@@ -11,9 +11,10 @@ public files and release artifacts.
 Read `Docs/Conventions.md` before editing code or documentation.
 
 `Sources/ToolchainSupport` owns typed build-input and repository validation. `Tools/ToolchainCLI`
-owns argument parsing. `Toolchain.lock.json` records immutable upstream identities. Full compiler
-sources and generated artifacts belong in `.cache`, `.build`, `Upstreams`, or `Artifacts`, which are
-ignored. Do not commit Apple SDK interfaces or SDK contents.
+owns argument parsing. `Sources/CompilerBridge` owns the C ABI and real frontend/LLD adapter.
+CMake profiles and explicit production targets own upstream builds. `Toolchain.lock.json` records
+immutable source revisions and archive checksums. Full compiler sources and generated artifacts
+belong in `.cache`, `.build`, `Upstreams`, or `Artifacts`, which are ignored. Do not commit Apple SDK interfaces or SDK contents.
 
 ## Code quality
 
@@ -54,7 +55,8 @@ Run the checks that own the changed files before committing.
 mise run check
 ```
 
-This runs formatting and lint, repository and input verification, Swift build and tests, and DocC.
+This runs formatting and lint, repository and input verification, Swift build and tests, DocC, and
+small native contract tests.
 Compiler recipe changes additionally need their bounded configuration or native-build checks once
 those recipes land. A source-only validation result is not proof of a rebuilt compiler.
 

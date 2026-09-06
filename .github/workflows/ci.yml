@@ -98,3 +98,24 @@ jobs:
       - name: Check complete commit messages and DCO trailers
         shell: bash
         run: git log --format=%B -z "$PR_BASE..$PR_HEAD" | swift run --skip-build toolchain check-history
+
+  native:
+    name: Native bridge contract
+    runs-on: macos-26
+    timeout-minutes: 10
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      MISE_DATA_DIR: ${{ github.workspace }}/.cache/native-tools/mise
+      MISE_CACHE_DIR: ${{ github.workspace }}/.cache/native-tools/mise/cache
+      MISE_WINGS_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: 2026.9.1
+          sha256: 3cfbe3295dba1a7e43bd02653517a8cc21135ba91f0635b45c98f1ebecc5513f
+          mise_dir: ${{ github.workspace }}/.cache/native-tools/mise
+          install_args: --locked
+      - run: mise run native-check

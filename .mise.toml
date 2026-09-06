@@ -1,4 +1,6 @@
 [tools]
+cmake = "4.3.2"
+ninja = "1.13.2"
 shellcheck = "0.11.0"
 shfmt = "3.14.0"
 swiftformat = { version = "0.58.7", rename_exe = "swiftformat" }
@@ -35,3 +37,7 @@ run = [
 [tasks.docs]
 description = "Build both DocC catalogs with warnings treated as errors."
 run = "Scripts/docs.sh"
+
+[tasks.native-check]
+description = "Build and run the small C ABI contract checks without upstream compiler builds."
+run = "Scripts/native-check.sh"
