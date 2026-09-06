@@ -15,3 +15,4 @@ set(LLVM_INCLUDE_EXAMPLES OFF CACHE BOOL "Examples are outside this build." FORC
 set(LLVM_INCLUDE_DOCS OFF CACHE BOOL "Documentation is outside this build." FORCE)
 set(CLANG_INCLUDE_TESTS OFF CACHE BOOL "Clang tests are outside the generator build." FORCE)
 set(LLVM_ENABLE_ZSTD OFF CACHE BOOL "The profile needs no compressed debug sections." FORCE)
+set(LLVM_APPEND_VC_REV OFF CACHE BOOL "Archive inputs use manifest provenance instead of a parent Git checkout." FORCE)

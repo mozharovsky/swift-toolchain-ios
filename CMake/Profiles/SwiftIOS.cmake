@@ -50,3 +50,4 @@ set(SWIFT_INCLUDE_DOCS OFF CACHE BOOL "Upstream documentation is outside this bu
 set(SWIFT_BUILD_SOURCEKIT OFF CACHE BOOL "The compiler profile does not require SourceKit." FORCE)
 set(SWIFT_BUILD_REMOTE_MIRROR OFF CACHE BOOL "The compiler profile does not require a remote mirror." FORCE)
 set(SWIFT_INCLUDE_APINOTES OFF CACHE BOOL "The compiler profile does not install SDK API notes." FORCE)
+set(SWIFT_APPEND_VC_REV OFF CACHE BOOL "Archive inputs use manifest provenance instead of a parent Git checkout." FORCE)

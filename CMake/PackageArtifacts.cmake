@@ -12,6 +12,15 @@ endif()
 if(NOT EXISTS "${TOOLCHAIN_MACRO_OUTPUT}/libSwiftInProcPluginServer.dylib")
   message(FATAL_ERROR "Run BuildMacros.cmake before packaging compiler artifacts.")
 endif()
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
+string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
+set(macro_files libSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
+  libObservationMacros.dylib libSwiftMacros.dylib)
+toolchain_verify_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
+  "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})
 set(TOOLCHAIN_PACKAGE_WORK "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work")
 file(MAKE_DIRECTORY "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks"
   "${TOOLCHAIN_ARTIFACT_OUTPUT}/XCFrameworks" "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives"

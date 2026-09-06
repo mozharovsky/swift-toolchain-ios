@@ -12,7 +12,7 @@ struct VerifyArtifactManifestCommand: ParsableCommand {
     var manifest: String
 
     /// Successful metadata checks do not claim archive integrity or device execution.
-    mutating func run() throws {
+    mutating func run() throws(ToolchainError) {
         let value = try ArtifactManifest.load(from: URL(fileURLWithPath: manifest))
         print("Validated \(value.artifacts.count) archive records for release \(value.version).")
         print("Run VerifyArtifacts.cmake to inspect archive bytes and framework contents.")

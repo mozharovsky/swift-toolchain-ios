@@ -65,6 +65,10 @@ if(BUILD_TESTING)
   add_test(NAME ArtifactMetadata
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ArtifactMetadata.cmake")
+  add_test(NAME ProducerCacheManifest
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/cache-manifest-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/CacheManifest.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()

@@ -14,3 +14,10 @@ target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}
 target_link_libraries(SwiftCompilerBridge PRIVATE swiftFrontendTool lldWasm lldCommon)
 set_target_properties(SwiftCompilerBridge PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
+
+# A post-link manifest cannot silently bless a cache that packaging reads without a rebuild.
+add_custom_command(TARGET SwiftCompilerBridge POST_BUILD
+  COMMAND "${CMAKE_COMMAND}"
+    "-DTOOLCHAIN_REPOSITORY_ROOT=${TOOLCHAIN_REPOSITORY_ROOT}"
+    "-DTOOLCHAIN_SWIFT_BUILD=${CMAKE_BINARY_DIR}"
+    -P "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/RecordNativeCache.cmake")

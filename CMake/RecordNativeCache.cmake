@@ -1,0 +1,13 @@
+include("${CMAKE_CURRENT_LIST_DIR}/CacheManifest.cmake")
+toolchain_native_identity(identity)
+toolchain_native_files(files "${TOOLCHAIN_SWIFT_BUILD}")
+toolchain_record_cache("${TOOLCHAIN_SWIFT_BUILD}/NativeArtifacts.json"
+  "${TOOLCHAIN_SWIFT_BUILD}" "${identity}" ${files})
+file(READ "${TOOLCHAIN_SWIFT_BUILD}/NativeArtifacts.json" manifest)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Toolchain.lock.json" configuration_hash)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch" patch_hash)
+string(JSON manifest SET "${manifest}" configurationSHA256 "\"${configuration_hash}\"")
+string(JSON manifest SET "${manifest}" frontendPatchSHA256 "\"${patch_hash}\"")
+file(WRITE "${TOOLCHAIN_SWIFT_BUILD}/NativeArtifacts.json.tmp" "${manifest}\n")
+file(RENAME "${TOOLCHAIN_SWIFT_BUILD}/NativeArtifacts.json.tmp"
+  "${TOOLCHAIN_SWIFT_BUILD}/NativeArtifacts.json")

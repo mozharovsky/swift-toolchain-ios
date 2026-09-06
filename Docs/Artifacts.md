@@ -37,6 +37,11 @@ mise exec -- cmake -DTOOLCHAIN_ARTIFACT_OUTPUT="$TOOLCHAIN_ARTIFACT_OUTPUT" \
   -P CMake/VerifyArtifacts.cmake
 ```
 
+The compiler's post-link step writes `NativeArtifacts.json` with input identities and each native
+library's content hash. Macro preparation verifies that receipt and records its own linked inputs.
+Packaging rejects missing, stale, or modified cache files before copying them. These receipts detect
+cache integrity failures and are not signed build attestations. Archive builds disable automatic Git revision lookup so upstream tools cannot report a parent checkout as the compiler source. Exact upstream commits remain in the validated manifest.
+
 The SDK archive must match the exact SHA-256 in `Toolchain.lock.json`. Packaging never reads an
 installed Apple SDK as guest input. Xcode supplies the SDK only when compiling native libraries
 and the small resource anchor.

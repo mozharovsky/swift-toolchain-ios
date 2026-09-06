@@ -67,4 +67,13 @@ foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacro
     -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${name}.dylib" ${sources}
     COMMAND_ERROR_IS_FATAL ANY)
 endforeach()
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
+string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
+set(macro_files libSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
+  libObservationMacros.dylib libSwiftMacros.dylib)
+toolchain_record_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
+  "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})
 message(STATUS "Built macro libraries against the existing compiler support ABI.")

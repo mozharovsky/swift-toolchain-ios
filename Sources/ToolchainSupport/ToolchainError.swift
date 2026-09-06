@@ -4,7 +4,8 @@ import Foundation
 package enum ToolchainError: Error, Equatable, CustomStringConvertible {
     /// Configuration failures identify the input that needs a reviewed correction.
     case invalidConfiguration(String)
-    /// Artifact failures reject unsafe paths and incompatible release metadata.
+    /// ArtifactManifest and CompilerArtifact validators reject invalid records before binary-target
+    /// resolution.
     case invalidArtifact(String)
     /// Commit failures prevent hooks and CI from accepting incomplete history metadata.
     case invalidCommit(String)
