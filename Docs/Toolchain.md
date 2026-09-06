@@ -5,9 +5,10 @@ The WebAssembly backend and LLD produce a statically linked `wasm32-unknown-wasi
 WASM SDK supplies the guest standard library, runtime archives, and supported Foundation components.
 These guest archives are compiler input data. They are not arm64 libraries.
 
-`Toolchain.lock.json` pins source commits and the official SDK archive. The current verifier checks
-the identities and target relationship. Source acquisition, compiler configuration, native builds,
-and artifact publication are not implemented in the maintenance command yet.
+`Toolchain.lock.json` pins source commits and the official SDK archive. The verifier checks source
+and archive
+identities and the target relationship. CMake owns source preparation and the explicit native build
+graph. Artifact packaging and publication remain separate work.
 
 ## Producer and consumer
 
@@ -30,6 +31,7 @@ support or App Store approval is established by this repository's maintenance te
 
 ## Next implementation work
 
-Move the minimal native bridge and configuration recipes into independently reproducible inputs.
-Validate them with bounded builds before producing a complete release. Keep full upstream trees,
+Validate a complete native build from the pinned source archives, then prepare versioned release
+artifacts. The bridge and configuration recipes are checked in with bounded contract checks. Keep
+full upstream trees,
 SDK downloads, native build products, and release archives in ignored storage.

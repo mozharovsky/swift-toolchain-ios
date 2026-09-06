@@ -8,6 +8,8 @@ package struct UpstreamSource: Codable, Equatable, Sendable {
     package let repository: String
     /// A full Git object identity prevents branch movement from changing a build input.
     package let revision: String
+    /// Source extraction verifies the codeload archive independently of the Git revision.
+    package let archiveSHA256: String
     /// Release preparation uses this SPDX expression to locate required notices.
     package let license: String
 
@@ -18,6 +20,9 @@ package struct UpstreamSource: Codable, Equatable, Sendable {
         }
         guard revision.range(of: #"^[a-f0-9]{40}$"#, options: .regularExpression) != nil else {
             throw .invalidConfiguration("Pin \(name) to a full lowercase Git commit hash.")
+        }
+        guard archiveSHA256.range(of: #"^[a-f0-9]{64}$"#, options: .regularExpression) != nil else {
+            throw .invalidConfiguration("Record the source archive checksum for \(name).")
         }
         guard let url = URLComponents(string: repository), url.scheme == "https",
               let host = url.host, !host.isEmpty, url.user == nil, url.password == nil,

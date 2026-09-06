@@ -1,0 +1,55 @@
+--- a/lib/FrontendTool/CMakeLists.txt
++++ b/lib/FrontendTool/CMakeLists.txt
+@@ -1,0 +2,3 @@
++option(SWIFT_ENABLE_IMMEDIATE_EXECUTION
++  "Build immediate native execution into the frontend." ON)
++
+@@ -18 +20,0 @@
+-    swiftImmediate
+@@ -29,0 +32,6 @@
++target_compile_definitions(swiftFrontendTool PRIVATE
++  SWIFT_ENABLE_IMMEDIATE_EXECUTION=$<BOOL:${SWIFT_ENABLE_IMMEDIATE_EXECUTION}>)
++if(SWIFT_ENABLE_IMMEDIATE_EXECUTION)
++  target_link_libraries(swiftFrontendTool PRIVATE swiftImmediate)
++endif()
++
+--- a/lib/FrontendTool/FrontendTool.cpp
++++ b/lib/FrontendTool/FrontendTool.cpp
+@@ -66,0 +67,5 @@
++#ifndef SWIFT_ENABLE_IMMEDIATE_EXECUTION
++#define SWIFT_ENABLE_IMMEDIATE_EXECUTION 1
++#endif
++
++#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
+@@ -67,0 +73 @@
++#endif
+@@ -1320,0 +1327 @@
++#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
+@@ -1332,0 +1340,5 @@
++#else
++    Instance.getDiags().diagnose(SourceLoc(), diag::immediate_execution_disabled);
++    ReturnValue = 1;
++    return true;
++#endif
+@@ -1806,0 +1819 @@
++#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
+@@ -1828,0 +1842,2 @@
++
++#endif
+@@ -2151 +2166,2 @@
+-  if (Action == FrontendOptions::ActionType::Immediate)
++  if (Action == FrontendOptions::ActionType::Immediate) {
++#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
+@@ -2153,0 +2170,6 @@
++#else
++    Instance.getDiags().diagnose(SourceLoc(), diag::immediate_execution_disabled);
++    ReturnValue = 1;
++    return true;
++#endif
++  }
+--- a/include/swift/AST/DiagnosticsFrontend.def
++++ b/include/swift/AST/DiagnosticsFrontend.def
+@@ -29,0 +30,3 @@
++ERROR(immediate_execution_disabled, none,
++      "immediate execution is disabled in this compiler build", ())
++

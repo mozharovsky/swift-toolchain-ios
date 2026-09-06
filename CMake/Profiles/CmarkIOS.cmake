@@ -1,0 +1,11 @@
+include("${CMAKE_CURRENT_LIST_DIR}/Common.cmake")
+
+set(CMAKE_MAKE_PROGRAM "${TOOLCHAIN_NINJA}" CACHE FILEPATH "The local Ninja executable." FORCE)
+set(CMAKE_BUILD_TYPE Release CACHE STRING "The markup library uses optimization without debug information." FORCE)
+set(CMAKE_SYSTEM_NAME iOS CACHE STRING "The markup library runs inside the native compiler." FORCE)
+set(CMAKE_OSX_SYSROOT iphoneos CACHE STRING "The markup library uses the device SDK." FORCE)
+set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The compiler host uses arm64." FORCE)
+set(CMAKE_OSX_DEPLOYMENT_TARGET ${TOOLCHAIN_DEPLOYMENT_TARGET} CACHE STRING "Native compiler libraries use the supported deployment floor." FORCE)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY CACHE STRING "Configuration probes need no signing." FORCE)
+set(CMAKE_MACOSX_BUNDLE OFF CACHE BOOL "The unselected cmark command must not require bundle installation rules." FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "Only the required static markup library is selected." FORCE)
