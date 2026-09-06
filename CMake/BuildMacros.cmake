@@ -56,6 +56,10 @@ execute_process(COMMAND xcrun --sdk iphoneos clang++ -std=c++17 -O2 -fvisibility
   -o "${TOOLCHAIN_MACRO_OUTPUT}/MacroEntry.o" COMMAND_ERROR_IS_FATAL ANY)
 
 foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
+  set(link_name "${name}")
+  if(name STREQUAL "SwiftLibraryPluginProvider")
+    set(link_name _CompilerSwiftLibraryPluginProvider)
+  endif()
   if(name STREQUAL "SwiftLibraryPluginProvider")
     set(sources "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/SwiftLibraryPluginProvider/LibraryPluginProvider.swift")
   elseif(name STREQUAL "SwiftInProcPluginServer")
@@ -65,10 +69,10 @@ foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacro
     file(GLOB sources "${TOOLCHAIN_SWIFT_SOURCE}/lib/Macros/Sources/${name}/*.swift")
   endif()
   execute_process(COMMAND "${compiler}" ${common}
-    -module-name "${name}" -module-link-name "${name}"
+    -module-name "${name}" -module-link-name "${link_name}" -Xfrontend -module-abi-name -Xfrontend "${link_name}"
     -emit-module-path "${TOOLCHAIN_MACRO_OUTPUT}/${name}.swiftmodule"
-    -Xlinker -install_name -Xlinker "@rpath/lib${name}.dylib"
-    -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${name}.dylib" ${sources}
+    -Xlinker -install_name -Xlinker "@rpath/lib${link_name}.dylib"
+    -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${link_name}.dylib" ${sources}
     COMMAND_ERROR_IS_FATAL ANY)
 endforeach()
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch)
@@ -76,7 +80,7 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" ad
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
 string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
-set(macro_files libSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
+set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib)
 toolchain_record_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
   "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})

@@ -96,7 +96,7 @@ struct ArtifactManifestTests {
             "SwiftCompilerBridge",
             "SwiftCompilerSDK",
             "SwiftInProcPluginServer",
-            "SwiftLibraryPluginProvider",
+            "_CompilerSwiftLibraryPluginProvider",
             "ObservationMacros",
             "SwiftMacros",
         ]

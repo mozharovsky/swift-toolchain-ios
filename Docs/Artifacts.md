@@ -79,3 +79,7 @@ fixture do not claim execution of the iOS compiler.
 A public release additionally needs reviewed archive contents and explicit publication. Preparation
 does not upload binaries. Native library sizes exclude SDK resources and any cache a consumer creates.
 Build success and metadata checks do not establish device execution or App Store acceptance.
+
+The compiler's native SwiftSyntax support and library-plugin provider use prefixed framework and ABI
+names. A consumer can therefore include the regular SwiftSyntax source package for parsing and
+source preparation without colliding with compiler-internal targets or symbols.

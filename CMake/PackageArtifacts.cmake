@@ -18,7 +18,7 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" ad
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
 string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
-set(macro_files libSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
+set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib)
 toolchain_verify_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
   "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})
@@ -34,7 +34,7 @@ foreach(input IN LISTS native_files)
 endforeach()
 list(SORT libraries)
 list(PREPEND libraries "${TOOLCHAIN_SWIFT_BUILD}/lib/libSwiftCompilerBridge.dylib")
-foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
+foreach(name _CompilerSwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
   list(APPEND libraries "${TOOLCHAIN_MACRO_OUTPUT}/lib${name}.dylib")
 endforeach()
 set(names "")

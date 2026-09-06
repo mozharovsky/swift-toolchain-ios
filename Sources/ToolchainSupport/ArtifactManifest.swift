@@ -81,7 +81,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
             "SwiftCompilerBridge",
             "SwiftCompilerSDK",
             "SwiftInProcPluginServer",
-            "SwiftLibraryPluginProvider",
+            "_CompilerSwiftLibraryPluginProvider",
             "ObservationMacros",
             "SwiftMacros",
         ]
