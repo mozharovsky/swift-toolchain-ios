@@ -61,7 +61,8 @@ input and patch identities. Repeated explicit builds let the underlying build sy
 and configuration changes.
 
 The main output is `libSwiftCompilerBridge.dylib` under the generated `swift-ios/lib` directory.
-The corresponding compiler support libraries stay beside it. The initial target does not package
+Compiler support libraries are under `swift-ios/lib/swift/host/compiler`. The initial target does not
+package
 XCFrameworks, install a target WASM SDK into an application, or produce the native macro-server
 bundle. Those artifact composition steps follow after the library build is validated.
 
