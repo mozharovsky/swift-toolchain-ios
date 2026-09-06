@@ -19,7 +19,8 @@ struct CommitMessageTests {
     @Test func rejectsMissingReason() {
         #expect(throws: ToolchainError.self) {
             try CommitMessage.validate(
-                "build(compiler): pin sources\n\nSigned-off-by: Example Author <author@example.com>\n",
+                "build(compiler): pin sources\n\n"
+                    + "Signed-off-by: Example Author <author@example.com>\n",
             )
         }
     }

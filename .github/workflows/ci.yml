@@ -25,6 +25,9 @@ jobs:
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: ./.github/actions/setup-quality-tools
       - run: mise run quality
+        env:
+          MISE_OFFLINE: "true"
+          MISE_LOCKED: "true"
 
   linux:
     name: Linux build and tests
