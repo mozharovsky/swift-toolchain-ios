@@ -62,6 +62,11 @@ arm64 iOS slices. `Archives` contains ZIP files for SwiftPM binary targets. `Art
 records configuration, patch, SDK, archive, and executable identities. The generated `Package.swift`
 exposes one local `SwiftCompilerArtifacts` product for integration checks.
 
+Packaging removes local symbol-table entries from staged framework copies with `strip -x`.
+It checks that exported and imported global symbol names remain identical and that each binary's
+size does not increase before replacing the staged file. Archive and executable checksums describe
+the resulting binaries. Applications sign their embedded frameworks after packaging.
+
 The native profile records `restrictedSwiftPatchSHA256` and `restrictedLLVMPatchSHA256` with
 `bundledMacroPatchSHA256`. Metadata validation requires the complete group when any member is
 present and checks each digest's syntax. Earlier manifests can omit the group. Native receipts

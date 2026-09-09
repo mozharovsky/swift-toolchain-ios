@@ -73,6 +73,17 @@ if(BUILD_TESTING)
     set(native_profile_library_arguments
       "-DTEST_ALLOWED_LIBRARY=$<TARGET_FILE:AllowedNativeImportFixture>"
       "-DTEST_FORBIDDEN_LIBRARY=$<TARGET_FILE:ForbiddenNativeImportFixture>")
+    add_library(NativeSymbolFixture SHARED Tests/ArtifactPackagingTests/LocalSymbols.c)
+    target_compile_options(NativeSymbolFixture PRIVATE -O0 -Wall -Wextra -Werror -Wpedantic)
+    add_executable(StrippedLibraryTests Tests/ArtifactPackagingTests/LibraryLoadTests.cpp)
+    target_compile_options(StrippedLibraryTests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+    add_test(NAME StripNativeSymbols COMMAND "${CMAKE_COMMAND}"
+      "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/strip-symbol-tests"
+      "-DTOOLCHAIN_TEST_LIBRARY=$<TARGET_FILE:NativeSymbolFixture>"
+      "-DTOOLCHAIN_TEST_LOADER=$<TARGET_FILE:StrippedLibraryTests>"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/StripNativeSymbols.cmake")
+    set_tests_properties(StripNativeSymbols PROPERTIES TIMEOUT 20)
     file(GLOB_RECURSE native_sources CONFIGURE_DEPENDS
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.h"
@@ -82,6 +93,8 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/Sources/NativeProfile/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/NativeProfileTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/NativeProfileTests/*.c"
+      "${CMAKE_SOURCE_DIR}/Tests/ArtifactPackagingTests/*.c"
+      "${CMAKE_SOURCE_DIR}/Tests/ArtifactPackagingTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/AppleFileSystemMetadataTests/*.cpp"
