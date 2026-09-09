@@ -18,6 +18,8 @@ endif()
 
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
   TOOLCHAIN_PATCH_SHA256)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
+  TOOLCHAIN_METADATA_PATCH_SHA256)
 string(JSON TOOLCHAIN_SOURCE_COUNT LENGTH "${TOOLCHAIN_INPUTS}" sources)
 math(EXPR TOOLCHAIN_LAST_SOURCE "${TOOLCHAIN_SOURCE_COUNT} - 1")
 set(TOOLCHAIN_SOURCE_NAMES "")
@@ -43,6 +45,8 @@ foreach(index RANGE ${TOOLCHAIN_LAST_SOURCE})
   set(identity "${name}-${revision}")
   if(name STREQUAL "swift")
     string(APPEND identity "-${TOOLCHAIN_PATCH_SHA256}")
+  elseif(name STREQUAL "llvm-project")
+    string(APPEND identity "-${TOOLCHAIN_METADATA_PATCH_SHA256}")
   endif()
   set(TOOLCHAIN_${name}_IDENTITY "${identity}")
   set(TOOLCHAIN_${name}_SOURCE "${TOOLCHAIN_SOURCE_ROOT}/${identity}")

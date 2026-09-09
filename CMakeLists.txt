@@ -28,6 +28,17 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME CompilerBridgeContract COMMAND CompilerBridgeContractTests)
   if(APPLE)
+    add_executable(AppleFileSystemMetadataTests
+      Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
+      Tests/AppleFileSystemMetadataTests/ContractTests.cpp)
+    target_include_directories(AppleFileSystemMetadataTests PRIVATE Sources/AppleFileSystemMetadata)
+    target_compile_options(AppleFileSystemMetadataTests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+    target_link_libraries(AppleFileSystemMetadataTests PRIVATE "-framework CoreFoundation")
+    add_test(NAME AppleFileSystemMetadata COMMAND AppleFileSystemMetadataTests)
+    add_test(NAME LLVMFileSystemMetadataConfiguration
+      COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/LLVMFixture"
+        -B "${CMAKE_CURRENT_BINARY_DIR}/llvm-metadata-fixture"
+        "-DCMAKE_PROJECT_LLVM_INCLUDE=${CMAKE_SOURCE_DIR}/CMake/IncludeAppleFileSystemMetadata.cmake")
     add_executable(MacroCallbackThreadingTests
       Sources/MacroBridge/MacroEntry.cpp Tests/MacroBridgeTests/ThreadingTests.cpp)
     target_include_directories(MacroCallbackThreadingTests PRIVATE Sources/MacroBridge)
@@ -40,6 +51,9 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.h"
       "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.h"
+      "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.cpp"
+      "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.h"
+      "${CMAKE_SOURCE_DIR}/Tests/AppleFileSystemMetadataTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/MacroBridgeTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/CompilerBridgeTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Tests/CompilerBridgeTests/*.h"
@@ -69,6 +83,14 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/cache-manifest-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/CacheManifest.cmake")
+  add_test(NAME ArtifactNotices
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/Notices.cmake")
+  add_test(NAME ArtifactNoticeSource
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-source-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NoticeSource.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()

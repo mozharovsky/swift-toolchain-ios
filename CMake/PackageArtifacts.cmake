@@ -61,6 +61,9 @@ foreach(name IN LISTS names)
 endforeach()
 toolchain_framework_module("${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/SwiftCompilerBridge.framework"
   SwiftCompilerBridge "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/CompilerBridge/SwiftCompilerBridge.h")
+file(COPY_FILE
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Resources/SwiftCompilerBridge/PrivacyInfo.xcprivacy"
+  "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/SwiftCompilerBridge.framework/PrivacyInfo.xcprivacy")
 include("${CMAKE_CURRENT_LIST_DIR}/PrepareSDK.cmake")
 list(APPEND names SwiftCompilerSDK)
 include("${CMAKE_CURRENT_LIST_DIR}/PrepareMacroSDK.cmake")
@@ -118,6 +121,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"programTarget\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n"
   "  \"configurationSHA256\": \"${lock_checksum}\",\n"
   "  \"frontendPatchSHA256\": \"${TOOLCHAIN_PATCH_SHA256}\",\n"
+  "  \"filesystemMetadataPatchSHA256\": \"${TOOLCHAIN_METADATA_PATCH_SHA256}\",\n"
   "  \"macroPatchSHA256\": \"${macro_patch_checksum}\",\n"
   "  \"producerRevision\": \"${producer_revision}\",\n"
   "  \"producerHasUncommittedChanges\": ${producer_dirty},\n"

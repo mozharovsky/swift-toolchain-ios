@@ -4,6 +4,9 @@ include("${CMAKE_CURRENT_LIST_DIR}/CompilerSupportModules.cmake")
 # Input hashes describe the producer code whose outputs a later packaging run can consume.
 function(toolchain_native_identity output)
   set(paths Toolchain.lock.json Patches/DisableImmediateExecution.patch
+    Patches/AppleFileSystemMetadata.patch CMake/IncludeAppleFileSystemMetadata.cmake
+    Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
+    Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.h
     CMake/Profiles/Common.cmake CMake/Profiles/HostTools.cmake CMake/Profiles/LLVM-IOS.cmake
     CMake/Profiles/CmarkIOS.cmake CMake/Profiles/SwiftIOS.cmake CMake/NativeLibraries.cmake
     CMake/IncludeBridge.cmake CMake/CompilerSupportModules.cmake Sources/CompilerBridge/CMakeLists.txt

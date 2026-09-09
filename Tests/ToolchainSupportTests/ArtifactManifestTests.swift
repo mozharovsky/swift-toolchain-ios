@@ -57,6 +57,23 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Earlier release manifests remain readable without claiming the newer filesystem profile.
+    @Test func acceptsLegacyFilesystemMetadata() throws {
+        let manifest = try Self.modified { object in
+            object.removeValue(forKey: "filesystemMetadataPatchSHA256")
+        }
+        #expect(manifest.filesystemMetadataPatchSHA256 == nil)
+        try manifest.validate()
+    }
+
+    /// A present filesystem patch identity must use the same checksum format as other inputs.
+    @Test func rejectsInvalidFilesystemMetadataDigest() throws {
+        let manifest = try Self.modified { object in
+            object["filesystemMetadataPatchSHA256"] = "invalid"
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// Development inputs must not select another archive or omit its transfer and integrity
     /// identity.
     @Test(arguments: ["archive", "size", "checksum"])
@@ -105,6 +122,7 @@ struct ArtifactManifestTests {
             compilerHost: inputs.compilerHost, programTarget: inputs.programTarget,
             configurationSHA256: String(repeating: "a", count: 64),
             frontendPatchSHA256: String(repeating: "b", count: 64),
+            filesystemMetadataPatchSHA256: String(repeating: "c", count: 64),
             macroPatchSHA256: String(repeating: "c", count: 64),
             producerRevision: String(repeating: "a", count: 40),
             producerHasUncommittedChanges: false,
