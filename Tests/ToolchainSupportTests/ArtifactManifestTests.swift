@@ -74,6 +74,58 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Reads earlier manifests without inferring native restrictions from absent metadata.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyNativeProfile() throws {
+        let manifest = try Self.modified { object in
+            object.removeValue(forKey: "restrictedSwiftPatchSHA256")
+            object.removeValue(forKey: "restrictedLLVMPatchSHA256")
+            object.removeValue(forKey: "bundledMacroPatchSHA256")
+        }
+        #expect(manifest.restrictedSwiftPatchSHA256 == nil)
+        #expect(manifest.restrictedLLVMPatchSHA256 == nil)
+        #expect(manifest.bundledMacroPatchSHA256 == nil)
+        try manifest.validate()
+    }
+
+    /// Rejects partial native profile claims before a consumer can resolve their archives.
+    ///
+    /// - Parameter field: The omitted member of the complete profile identity record.
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test(arguments: [
+        "restrictedSwiftPatchSHA256", "restrictedLLVMPatchSHA256", "bundledMacroPatchSHA256",
+    ])
+    func rejectsIncompleteNativeProfile(_ field: String) throws {
+        let manifest = try Self.modified { object in object.removeValue(forKey: field) }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Applies checksum validation to each member of a complete native profile record.
+    ///
+    /// - Parameter field: The profile identity whose digest is replaced with invalid text.
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test(arguments: [
+        "restrictedSwiftPatchSHA256", "restrictedLLVMPatchSHA256", "bundledMacroPatchSHA256",
+    ])
+    func rejectsInvalidNativeProfileDigest(_ field: String) throws {
+        let manifest = try Self.modified { object in object[field] = "invalid" }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Preserves every native profile identity through the manifest's public Codable contract.
+    ///
+    /// - Throws: Fixture loading, encoding, or decoding fails.
+    @Test func preservesNativeProfileIdentities() throws {
+        let original = try Self.fixture()
+        let restored = try JSONDecoder().decode(
+            ArtifactManifest.self, from: JSONEncoder().encode(original),
+        )
+        #expect(restored.restrictedSwiftPatchSHA256 == original.restrictedSwiftPatchSHA256)
+        #expect(restored.restrictedLLVMPatchSHA256 == original.restrictedLLVMPatchSHA256)
+        #expect(restored.bundledMacroPatchSHA256 == original.bundledMacroPatchSHA256)
+    }
+
     /// Development inputs must not select another archive or omit its transfer and integrity
     /// identity.
     @Test(arguments: ["archive", "size", "checksum"])
@@ -123,6 +175,9 @@ struct ArtifactManifestTests {
             configurationSHA256: String(repeating: "a", count: 64),
             frontendPatchSHA256: String(repeating: "b", count: 64),
             filesystemMetadataPatchSHA256: String(repeating: "c", count: 64),
+            restrictedSwiftPatchSHA256: String(repeating: "d", count: 64),
+            restrictedLLVMPatchSHA256: String(repeating: "e", count: 64),
+            bundledMacroPatchSHA256: String(repeating: "f", count: 64),
             macroPatchSHA256: String(repeating: "c", count: 64),
             producerRevision: String(repeating: "a", count: 40),
             producerHasUncommittedChanges: false,

@@ -1,0 +1,249 @@
+--- a/lib/Basic/Program.cpp
++++ b/lib/Basic/Program.cpp
+@@ -22,6 +22,7 @@
+ #include "llvm/Support/Windows/WindowsSupport.h"
+ #endif
+ 
++#include <cerrno>
+ #include <memory>
+ #include <system_error>
+ 
+@@ -43,7 +44,13 @@
+ 
+ int swift::ExecuteInPlace(const char *Program, const char **args,
+                           const char **env) {
+-#if LLVM_ON_UNIX
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  (void)Program;
++  (void)args;
++  (void)env;
++  errno = EPERM;
++  return -1;
++#elif LLVM_ON_UNIX
+   int result;
+   if (env)
+     result = execve(Program, const_cast<char **>(args),
+@@ -64,6 +71,13 @@
+ #endif
+ }
+ 
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++llvm::ErrorOr<swift::ChildProcessInfo>
++swift::ExecuteWithPipe(llvm::StringRef, llvm::ArrayRef<llvm::StringRef>,
++                       std::optional<llvm::ArrayRef<llvm::StringRef>>) {
++  return std::errc::operation_not_permitted;
++}
++#else
+ static const char **
+ toNullTerminatedCStringArray(ArrayRef<StringRef> array,
+                              llvm::BumpPtrAllocator &Alloc) {
+@@ -302,3 +316,5 @@
+ }
+ 
+ #endif
++
++#endif
+--- a/lib/Basic/LoadDynamicLibrary.cpp
++++ b/lib/Basic/LoadDynamicLibrary.cpp
+@@ -11,6 +11,11 @@
+ //===----------------------------------------------------------------------===//
+ 
+ #include "swift/Basic/LoadDynamicLibrary.h"
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++#include "SwiftToolchainPluginPolicy.h"
++#include <cstdlib>
++#include <memory>
++#endif
+ 
+ #if defined(_WIN32)
+ #define WIN32_LEAN_AND_MEAN
+@@ -46,8 +51,18 @@
+ 
+ #else
+ void *swift::loadLibrary(const char *path, std::string *err) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  std::unique_ptr<char, decltype(&std::free)> bundledPath(
++      swift_toolchain_copy_bundled_plugin_path(path), &std::free);
++  if (!bundledPath) {
++    if (err)
++      *err = "Plugin libraries must be bundled framework executables.";
++    return nullptr;
++  }
++  path = bundledPath.get();
++#endif
+   void *handle = ::dlopen(path, RTLD_LAZY | RTLD_LOCAL);
+-  if (!handle)
++  if (!handle && err)
+     *err = ::dlerror();
+   return handle;
+ }
+--- a/lib/AST/PluginRegistry.cpp
++++ b/lib/AST/PluginRegistry.cpp
+@@ -129,6 +129,12 @@
+ 
+ llvm::Expected<CompilerPlugin *>
+ PluginRegistry::loadExecutablePlugin(StringRef path, bool disableSandbox) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  (void)path;
++  (void)disableSandbox;
++  return llvm::createStringError(std::errc::operation_not_permitted,
++                                 "Executable plugins are unavailable in the embedded compiler.");
++#else
+   llvm::sys::fs::file_status stat;
+   if (auto err = llvm::sys::fs::status(path, stat)) {
+     return llvm::errorCodeToError(err);
+@@ -170,6 +176,7 @@
+ 
+   storage = std::move(plugin);
+   return storage.get();
++#endif
+ }
+ 
+ LoadedExecutablePlugin::~LoadedExecutablePlugin() {
+@@ -183,6 +190,10 @@
+ }
+ 
+ llvm::Error LoadedExecutablePlugin::spawnIfNeeded() {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  return llvm::createStringError(std::errc::operation_not_permitted,
++                                 "Executable plugins are unavailable in the embedded compiler.");
++#else
+   if (Process) {
+     // NOTE: We don't check the mtime here because 'stat(2)' call is too heavy.
+     // PluginRegistry::loadExecutablePlugin() checks it and replace this object
+@@ -214,6 +225,7 @@
+   }
+ 
+   return llvm::Error::success();
++#endif
+ }
+ 
+ LoadedExecutablePlugin::PluginProcess::~PluginProcess() {
+--- a/lib/Frontend/CompilerInvocation.cpp
++++ b/lib/Frontend/CompilerInvocation.cpp
+@@ -40,6 +40,11 @@
+ #include "llvm/Support/VersionTuple.h"
+ #include "llvm/Support/WithColor.h"
+ #include "llvm/TargetParser/Triple.h"
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++#include "SwiftToolchainPluginPolicy.h"
++#include <cstdlib>
++#include <memory>
++#endif
+ 
+ using namespace swift;
+ using namespace llvm::opt;
+@@ -2404,8 +2409,20 @@
+   }
+   Opts.setFrameworkSearchPaths(FrameworkSearchPaths);
+ 
+-  if (const Arg *A = Args.getLastArg(OPT_in_process_plugin_server_path))
++  if (const Arg *A = Args.getLastArg(OPT_in_process_plugin_server_path)) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++    const auto serverPath = resolveSearchPath(A->getValue());
++    std::unique_ptr<char, decltype(&std::free)> bundledPath(
++        swift_toolchain_copy_bundled_plugin_path(serverPath.c_str()), &std::free);
++    if (!bundledPath) {
++      Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_path, A->getValue());
++      return true;
++    }
++    Opts.InProcessPluginServerPath = bundledPath.get();
++#else
+     Opts.InProcessPluginServerPath = A->getValue();
++#endif
++  }
+ 
+   // All plugin search options, i.e. '-load-plugin-library',
+   // '-load-plugin-executable', '-plugin-path', and  '-external-plugin-path'
+@@ -2413,10 +2430,29 @@
+   // e.g. For '-plugin-path A -load-plugin-library B/libModule.dylib', if
+   // 'A/libModule.dylib' exists, it's used.
+   for (const Arg *A : Args.filtered(OPT_plugin_search_Group)) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++    if (A->getOption().getID() != OPT_load_plugin_library &&
++        A->getOption().getID() != OPT_load_resolved_plugin) {
++      Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_option, A->getSpelling());
++      return true;
++    }
++#endif
+     switch (A->getOption().getID()) {
+     case OPT_load_plugin_library: {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++      const auto libraryPath = resolveSearchPath(A->getValue());
++      std::unique_ptr<char, decltype(&std::free)> bundledPath(
++          swift_toolchain_copy_bundled_plugin_path(libraryPath.c_str()), &std::free);
++      if (!bundledPath) {
++        Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_path, A->getValue());
++        return true;
++      }
++      Opts.PluginSearchOpts.emplace_back(
++          PluginSearchOption::LoadPluginLibrary{bundledPath.get()});
++#else
+       Opts.PluginSearchOpts.emplace_back(PluginSearchOption::LoadPluginLibrary{
+           resolveSearchPath(A->getValue())});
++#endif
+       break;
+     }
+     case OPT_load_plugin_executable: {
+@@ -2465,7 +2501,24 @@
+           (libraryPath.empty() && executablePath.empty())) {
+         Diags.diagnose(SourceLoc(), diag::error_load_resolved_plugin,
+                        A->getValue());
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++        return true;
++#endif
+       }
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++      if (!executablePath.empty()) {
++        Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_server);
++        return true;
++      }
++      const auto resolvedPath = resolveSearchPath(libraryPath);
++      std::unique_ptr<char, decltype(&std::free)> bundledPath(
++          swift_toolchain_copy_bundled_plugin_path(resolvedPath.c_str()), &std::free);
++      if (!bundledPath) {
++        Diags.diagnose(SourceLoc(), diag::error_embedded_plugin_path, libraryPath);
++        return true;
++      }
++      libraryPath = bundledPath.get();
++#endif
+       std::vector<std::string> moduleNames;
+       for (auto name : llvm::split(modulesStr, ',')) {
+         moduleNames.emplace_back(name);
+--- a/include/swift/AST/DiagnosticsFrontend.def
++++ b/include/swift/AST/DiagnosticsFrontend.def
+@@ -144,6 +144,12 @@
+ ERROR(error_no_source_location_scope_map,none,
+       "-dump-scope-maps argument must be 'expanded' or a list of "
+       "source locations", ())
++ERROR(error_embedded_plugin_option,none,
++      "plugin option '%0' is unavailable in the embedded compiler", (StringRef))
++ERROR(error_embedded_plugin_path,none,
++      "plugin library '%0' must be a framework executable in the app bundle", (StringRef))
++ERROR(error_embedded_plugin_server,none,
++      "external plugin servers are unavailable in the embedded compiler", ())
+ ERROR(error_load_plugin_executable,none,
+       "invalid value '%0' in '-load-plugin-executable'; "
+       "make sure to use format '<plugin path>#<module names>'", (StringRef))
+--- a/lib/Basic/Unix/TaskQueue.inc
++++ b/lib/Basic/Unix/TaskQueue.inc
+@@ -155,6 +155,11 @@
+ } // end namespace swift
+ 
+ bool Task::execute() {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  State = TaskState::Finished;
++  Errors = "Subprocess execution is unavailable in the embedded compiler.";
++  return true;
++#else
+   assert(State < TaskState::Executing && "This Task cannot be executed twice!");
+   State = TaskState::Executing;
+ 
+@@ -274,6 +279,7 @@
+ #endif
+ 
+   return false;
++#endif
+ }
+ 
+ /// Read the data in \p Pipe, and append it to \p Output.

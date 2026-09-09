@@ -5,6 +5,10 @@ include("${CMAKE_CURRENT_LIST_DIR}/CompilerSupportModules.cmake")
 function(toolchain_native_identity output)
   set(paths Toolchain.lock.json Patches/DisableImmediateExecution.patch
     Patches/AppleFileSystemMetadata.patch CMake/IncludeAppleFileSystemMetadata.cmake
+    Patches/RestrictedSwiftNativeProfile.patch Patches/RestrictedLLVMNativeProfile.patch
+    CMake/Profiles/RestrictedNative.cmake
+    Sources/NativeProfile/BundledPluginPolicy.cpp Sources/NativeProfile/BundledPluginPolicy.h
+    Sources/NativeProfile/SwiftToolchainPluginPolicy.h Sources/NativeProfile/module.modulemap
     Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
     Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.h
     CMake/Profiles/Common.cmake CMake/Profiles/HostTools.cmake CMake/Profiles/LLVM-IOS.cmake

@@ -31,7 +31,11 @@ __attribute__((visibility("default"))) uint32_t swift_compiler_abi_version(void)
     SWIFT_COMPILER_NOEXCEPT;
 
 /// Trusted frontend arguments are borrowed until this synchronous call returns.
-/// Ordinary source errors are reusable, while fatal compiler failures can terminate the process.
+/// Ordinary source errors leave compiler state reusable. Fatal compiler failures can terminate
+/// the process. The iOS profile rejects process execution and executable LLVM memory requests.
+/// Plugin libraries and the in-process server resolve to Name.framework/Name in the main
+/// application's private frameworks directory. Resolved-plugin arguments require an empty
+/// executable-server field. The application preserves these files throughout compiler use.
 /// Bundled macros may call the main queue, so clients keep it available while awaiting worker
 /// calls.
 __attribute__((visibility("default"))) SwiftCompilerResult

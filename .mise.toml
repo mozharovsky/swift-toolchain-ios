@@ -30,7 +30,7 @@ run = "Scripts/quality.sh"
 [tasks.format]
 description = "Apply the pinned Swift and shell formatting rules."
 run = [
-  "swiftformat . --cache ignore",
+  "swiftformat --config .swiftformat . --cache ignore",
   "shfmt -w -i 4 -ci Scripts/*.sh Scripts/Hooks/*",
 ]
 

@@ -1,0 +1,4 @@
+module SwiftToolchainPluginPolicy {
+  header "SwiftToolchainPluginPolicy.h"
+  export *
+}

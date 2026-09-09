@@ -1,4 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/Common.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/RestrictedNative.cmake")
 
 set(CMAKE_PROJECT_LLVM_INCLUDE "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeAppleFileSystemMetadata.cmake"
   CACHE FILEPATH "Volume-locality checks use Apple's resource metadata API." FORCE)

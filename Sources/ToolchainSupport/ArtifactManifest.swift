@@ -19,6 +19,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// The filesystem metadata patch identity, absent from releases before this profile existed.
     /// Artifact validation checks its checksum format before a consumer selects the release.
     package let filesystemMetadataPatchSHA256: String?
+    /// The Swift restriction patch identity, absent from releases before the native profile.
+    package let restrictedSwiftPatchSHA256: String?
+    /// The LLVM restriction patch identity, present with the complete native profile record.
+    package let restrictedLLVMPatchSHA256: String?
+    /// The bundled macro policy identity, present with the complete native profile record.
+    package let bundledMacroPatchSHA256: String?
     /// The macro adapter preserves the upstream main-actor callback requirement.
     package let macroPatchSHA256: String
     /// Source publication can pin the packaging code independently of upstream compiler revisions.
@@ -37,7 +43,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Each framework remains replaceable behind the consumer's single product.
     package let artifacts: [CompilerArtifact]
 
-    /// Metadata verification never executes code or claims that archive bytes were inspected.
+    /// Loads validated release metadata without executing code or inspecting archive bytes.
+    ///
+    /// - Parameter url: The local artifact manifest to decode and validate.
+    /// - Returns: The manifest with its input and archive contracts checked.
+    /// - Throws: ``ToolchainError`` when file reading or decoding fails.
+    ///   Invalid metadata also throws.
     package static func load(from url: URL) throws(ToolchainError) -> Self {
         let manifest: Self
         do {
@@ -49,7 +60,13 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         return manifest
     }
 
-    /// A consumer rejects incomplete and mismatched records before resolving binary targets.
+    /// Validates release identities before a consumer resolves binary targets.
+    ///
+    /// A native profile record supplies every restriction patch identity together. Earlier
+    /// manifests can omit the complete record without claiming those restrictions.
+    ///
+    /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
+    ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
         guard schemaVersion == 1, bridgeABI == 1 else {
             throw .invalidArtifact("Use artifact schema 1 and compiler bridge ABI 1.")
@@ -78,6 +95,19 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         try macroBuildSupport.validate()
         if let filesystemMetadataPatchSHA256 {
             try CompilerArtifact.validateChecksum(filesystemMetadataPatchSHA256)
+        }
+        let profileIdentities = [
+            restrictedSwiftPatchSHA256,
+            restrictedLLVMPatchSHA256,
+            bundledMacroPatchSHA256,
+        ]
+        let suppliedIdentities = profileIdentities.compactMap(\.self)
+        let hasCompleteProfile = suppliedIdentities.count == profileIdentities.count
+        guard suppliedIdentities.isEmpty || hasCompleteProfile else {
+            throw .invalidArtifact("Record every native profile patch identity together.")
+        }
+        for checksum in suppliedIdentities {
+            try CompilerArtifact.validateChecksum(checksum)
         }
         let names = artifacts.map(\.name)
         guard Set(names).count == names.count else {

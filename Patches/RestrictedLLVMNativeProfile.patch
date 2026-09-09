@@ -1,0 +1,130 @@
+--- a/llvm/lib/Support/Unix/Program.inc
++++ b/llvm/lib/Support/Unix/Program.inc
+@@ -88,6 +88,7 @@
+   return errc::no_such_file_or_directory;
+ }
+ 
++#if !defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
+ static bool RedirectIO(std::optional<StringRef> Path, int FD, std::string *ErrMsg) {
+   if (!Path) // Noop
+     return false;
+@@ -330,7 +331,18 @@
+   PI.Process = child;
+ 
+   return true;
++}
++
++#else
++static bool Execute(ProcessInfo &, StringRef, ArrayRef<StringRef>,
++                    std::optional<ArrayRef<StringRef>>,
++                    ArrayRef<std::optional<StringRef>>, unsigned,
++                    std::string *ErrMsg, BitVector *, bool) {
++  if (ErrMsg)
++    *ErrMsg = "Subprocess execution is unavailable in the embedded compiler.";
++  return false;
+ }
++#endif
+ 
+ namespace llvm {
+ namespace sys {
+@@ -383,6 +395,15 @@
+                             std::string *ErrMsg,
+                             std::optional<ProcessStatistics> *ProcStat,
+                             bool Polling) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  if (ErrMsg)
++    *ErrMsg = "Subprocess execution is unavailable in the embedded compiler.";
++  if (ProcStat)
++    ProcStat->reset();
++  ProcessInfo Result;
++  Result.ReturnCode = -1;
++  return Result;
++#else
+   struct sigaction Act, Old;
+   assert(PI.Pid && "invalid pid to wait on, process not started?");
+ 
+@@ -500,6 +521,7 @@
+     WaitResult.ReturnCode = -2;
+   }
+   return WaitResult;
++#endif
+ }
+ 
+ std::error_code llvm::sys::ChangeStdinMode(fs::OpenFlags Flags) {
+--- a/llvm/lib/Support/Unix/Memory.inc
++++ b/llvm/lib/Support/Unix/Memory.inc
+@@ -44,6 +44,7 @@
+     return PROT_WRITE;
+   case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE:
+     return PROT_READ | PROT_WRITE;
++#if !defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
+   case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC:
+     return PROT_READ | PROT_EXEC;
+   case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE |
+@@ -60,6 +61,7 @@
+ #else
+     return PROT_EXEC;
+ #endif
++#endif
+   default:
+     llvm_unreachable("Illegal memory protection flag specified!");
+   }
+@@ -74,6 +76,12 @@
+                                          const MemoryBlock *const NearBlock,
+                                          unsigned PFlags, std::error_code &EC) {
+   EC = std::error_code();
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  if (PFlags & MF_EXEC) {
++    EC = std::make_error_code(std::errc::operation_not_permitted);
++    return MemoryBlock();
++  }
++#endif
+   if (NumBytes == 0)
+     return MemoryBlock();
+ 
+@@ -163,6 +171,10 @@
+ 
+ std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
+                                             unsigned Flags) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  if (Flags & MF_EXEC)
++    return std::make_error_code(std::errc::operation_not_permitted);
++#endif
+   static const Align PageSize = Align(Process::getPageSizeEstimate());
+   if (M.Address == nullptr || M.AllocatedSize == 0)
+     return std::error_code();
+@@ -208,6 +220,10 @@
+ /// that has been emitted it must invalidate the instruction cache on some
+ /// platforms.
+ void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  (void)Addr;
++  (void)Len;
++#else
+ 
+ // icache invalidation for PPC and ARM.
+ #if defined(__APPLE__)
+@@ -249,6 +265,7 @@
+ #endif // end apple
+ 
+   ValgrindDiscardTranslations(Addr, Len);
++#endif
+ }
+ 
+ } // namespace sys
+--- a/llvm/lib/Support/Unix/DynamicLibrary.inc
++++ b/llvm/lib/Support/Unix/DynamicLibrary.inc
+@@ -25,6 +25,13 @@
+ }
+ 
+ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
++#if defined(SWIFT_TOOLCHAIN_RESTRICTED_NATIVE)
++  if (File) {
++    if (Err)
++      *Err = "LLVM library plugins are unavailable in the embedded compiler.";
++    return &DynamicLibrary::Invalid;
++  }
++#endif
+   void *Handle = ::dlopen(File, RTLD_LAZY | RTLD_GLOBAL);
+   if (!Handle) {
+     if (Err)

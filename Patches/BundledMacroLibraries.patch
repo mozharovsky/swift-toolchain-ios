@@ -1,0 +1,37 @@
+--- a/LibraryPluginProvider.swift
++++ b/LibraryPluginProvider.swift
+@@ -12,6 +12,10 @@
+ 
+ #if !os(WASI)
+ 
++#if SWIFT_TOOLCHAIN_RESTRICTED_NATIVE
++private import SwiftToolchainPluginPolicy
++#endif
++
+ #if compiler(>=6)
+ public import SwiftSyntaxMacros
+ @_spi(PluginMessage) public import SwiftCompilerPluginMessageHandling
+@@ -160,9 +164,21 @@
+ }
+ #else
+ private func _loadLibrary(_ path: String) throws -> UnsafeMutableRawPointer {
+-  guard let dlHandle = dlopen(path, RTLD_LAZY | RTLD_LOCAL) else {
+-    throw LibraryPluginError(message: "loader error: \(String(cString: dlerror()!))")
++  #if SWIFT_TOOLCHAIN_RESTRICTED_NATIVE
++  guard !path.utf8.contains(0),
++    let bundledPath = path.withCString({ swift_toolchain_copy_bundled_plugin_path($0) })
++  else {
++    throw LibraryPluginError(message: "Plugin libraries must be bundled framework executables.")
+   }
++  defer { free(bundledPath) }
++  let handle = dlopen(bundledPath, RTLD_LAZY | RTLD_LOCAL)
++  #else
++  let handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL)
++  #endif
++  guard let dlHandle = handle else {
++    let error = dlerror().map { String(cString: $0) } ?? "unknown loader error"
++    throw LibraryPluginError(message: "Could not load the plugin library. " + error)
++  }
+   return dlHandle
+ }
+ #endif
