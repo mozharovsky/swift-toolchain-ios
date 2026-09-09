@@ -1,4 +1,8 @@
 include("${TOOLCHAIN_SOURCE_DIR}/CMake/VerifyNativeProfile.cmake")
+if(DEFINED TEST_LIBRARY)
+  toolchain_verify_native_profile("${TEST_LIBRARY}")
+  return()
+endif()
 if(DEFINED TEST_IMPORT)
   toolchain_validate_native_imports("Compiler.framework/Compiler" "${TEST_IMPORT}")
   return()
@@ -16,3 +20,13 @@ foreach(symbol _fork _vfork _execv _execve _execvp _execvpe _execl _execle _exec
     message(FATAL_ERROR "A disallowed native import was accepted. ${symbol} ${output} ${error}")
   endif()
 endforeach()
+
+if(DEFINED TEST_ALLOWED_LIBRARY AND DEFINED TEST_FORBIDDEN_LIBRARY)
+  toolchain_verify_native_profile("${TEST_ALLOWED_LIBRARY}")
+  execute_process(COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${TOOLCHAIN_SOURCE_DIR}"
+    "-DTEST_LIBRARY=${TEST_FORBIDDEN_LIBRARY}" -P "${CMAKE_CURRENT_LIST_FILE}"
+    RESULT_VARIABLE status OUTPUT_VARIABLE output ERROR_VARIABLE error)
+  if(status EQUAL 0 OR NOT error MATCHES "native compiler profile rejects _system")
+    message(FATAL_ERROR "A forbidden import in a native library was accepted. ${output} ${error}")
+  endif()
+endif()

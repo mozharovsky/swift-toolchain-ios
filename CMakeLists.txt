@@ -44,6 +44,7 @@ if(BUILD_TESTING)
   endif()
   add_test(NAME BundledPluginPolicy COMMAND BundledPluginPolicyTests)
   set_tests_properties(BundledPluginPolicy PROPERTIES TIMEOUT 20)
+  set(native_profile_library_arguments)
   if(APPLE)
     add_executable(AppleFileSystemMetadataTests
       Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
@@ -63,6 +64,15 @@ if(BUILD_TESTING)
     add_test(NAME MacroCallbackThreading COMMAND MacroCallbackThreadingTests)
     set_tests_properties(MacroCallbackThreading PROPERTIES TIMEOUT 20)
     find_program(TOOLCHAIN_XCRUN NAMES xcrun REQUIRED)
+    add_library(AllowedNativeImportFixture SHARED Tests/NativeProfileTests/ImportFixture.c)
+    add_library(ForbiddenNativeImportFixture SHARED Tests/NativeProfileTests/ImportFixture.c)
+    target_compile_definitions(ForbiddenNativeImportFixture PRIVATE TOOLCHAIN_TEST_FORBIDDEN_IMPORT=1)
+    foreach(target AllowedNativeImportFixture ForbiddenNativeImportFixture)
+      target_compile_options(${target} PRIVATE -Wall -Wextra -Werror -Wpedantic)
+    endforeach()
+    set(native_profile_library_arguments
+      "-DTEST_ALLOWED_LIBRARY=$<TARGET_FILE:AllowedNativeImportFixture>"
+      "-DTEST_FORBIDDEN_LIBRARY=$<TARGET_FILE:ForbiddenNativeImportFixture>")
     file(GLOB_RECURSE native_sources CONFIGURE_DEPENDS
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.h"
@@ -71,6 +81,7 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/Sources/NativeProfile/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/NativeProfile/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/NativeProfileTests/*.cpp"
+      "${CMAKE_SOURCE_DIR}/Tests/NativeProfileTests/*.c"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/AppleFileSystemMetadataTests/*.cpp"
@@ -113,6 +124,7 @@ if(BUILD_TESTING)
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NoticeSource.cmake")
   add_test(NAME NativeProfileImports
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      ${native_profile_library_arguments}
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NativeProfile.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)

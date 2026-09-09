@@ -84,12 +84,15 @@ int checkMemory() {
                               std::errc::operation_not_permitted &&
                           bytes[0] == 73,
                       "A refused executable protection change must preserve the data mapping.");
-    failures += check(!Memory::protectMappedMemory(block, Memory::MF_READ | Memory::MF_WRITE),
-                      "A data mapping must remain writable after a refused executable request.");
-    bytes[0] = 19;
-    Memory::InvalidateInstructionCache(block.base(), 1);
+    const bool writable = !Memory::protectMappedMemory(block, Memory::MF_READ | Memory::MF_WRITE);
     failures +=
-        check(bytes[0] == 19, "Instruction-cache invalidation must not alter data mappings.");
+        check(writable, "A data mapping must remain writable after a refused executable request.");
+    if (writable) {
+      bytes[0] = 19;
+      Memory::InvalidateInstructionCache(block.base(), 1);
+      failures +=
+          check(bytes[0] == 19, "Instruction-cache invalidation must not alter data mappings.");
+    }
     failures += check(!Memory::releaseMappedMemory(block), "Data mappings must remain releasable.");
   }
   return failures;

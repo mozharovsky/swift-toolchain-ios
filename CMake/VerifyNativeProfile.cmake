@@ -13,9 +13,9 @@ function(toolchain_validate_native_imports library imports)
   endforeach()
 endfunction()
 
-# Only native production runs this image inspection, so bounded checks need no platform SDK binary.
+# Packaging and host fixtures request symbol names so tool formatting cannot bypass the policy.
 function(toolchain_verify_native_profile library)
-  execute_process(COMMAND xcrun nm -u "${library}" OUTPUT_VARIABLE imports
+  execute_process(COMMAND xcrun nm -u -j "${library}" OUTPUT_VARIABLE imports
     ERROR_VARIABLE error RESULT_VARIABLE status)
   if(NOT status EQUAL 0)
     message(FATAL_ERROR "Could not inspect native imports in ${library}. ${error}")
