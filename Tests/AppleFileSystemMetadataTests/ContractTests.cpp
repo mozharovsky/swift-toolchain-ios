@@ -41,11 +41,15 @@ int main() {
                     "A missing output must report EINVAL.");
   failures += check(swift_toolchain_is_local_fd(descriptor, nullptr) == EINVAL,
                     "A descriptor needs valid output storage.");
+  failures += check(unlink(path) == 0, "Unlink the open metadata fixture.");
+  result = !expected;
+  failures += check(swift_toolchain_is_local_fd(descriptor, &result) == 0 && result == expected,
+                    "An unlinked descriptor must retain its volume locality.");
   close(descriptor);
+  unlink(path);
   result = true;
   failures += check(swift_toolchain_is_local_fd(descriptor, &result) == EBADF && result,
                     "A closed descriptor must leave the output unchanged.");
-  unlink(path);
   result = true;
   failures += check(swift_toolchain_is_local_path(path, &result) == ENOENT && result,
                     "A removed file must leave the output unchanged.");

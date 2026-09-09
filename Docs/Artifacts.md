@@ -66,9 +66,10 @@ in the application.
 
 `Licenses/NativeNotices.json` records additional license text selected from pinned native source
 files. These entries include the xxHash, regular-expression, and Unicode conversion notices within
-LLVM. Packaging verifies the source-file and notice hashes before adding the entries to
-`NativeSources.json`. Archive verification checks every copied notice in both native and target
-inventories.
+LLVM. Packaging verifies the source-file hash, complete declared comment range, selected-text hash,
+and packaged notice before adding the entries to `NativeSources.json`. It removes comment delimiters
+and one formatting space after each leading star, trims trailing line whitespace, and retains the
+remaining text. Archive verification checks every copied notice in both native and target inventories.
 
 The compiler framework declares file metadata access for container-scoped source and module loading.
 Its disk-space declaration covers LLVM's cache pruning when the consumer enables an on-disk linker
@@ -76,8 +77,9 @@ cache. That path removes cached files based on available capacity before retaini
 These declarations require compiler inputs and caches to stay within the consumer's containers.
 Consumers must keep capacity metadata and capacity-derived cache diagnostics on the device.
 
-The iOS profile queries volume locality through CoreFoundation resource metadata. This keeps the
-file mapping policy independent of capacity queries. `AppleFileSystemMetadata.patch` selects that
+The iOS profile queries path locality through CoreFoundation resource metadata. Open descriptors
+use `fgetattrlist` with only the returned-attribute mask and volume mount flags, so an unlinked file
+retains its locality without requesting capacity. `AppleFileSystemMetadata.patch` selects that
 adapter without changing LLVM's other platform implementations. A new native build is required
 after this patch or its adapter changes. The native receipt and release manifest record the patch
 identity. Older artifact manifests may omit that field.

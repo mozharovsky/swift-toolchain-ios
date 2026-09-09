@@ -17,6 +17,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Consumers can identify the compiler's immediate-execution profile.
     package let frontendPatchSHA256: String
     /// The filesystem metadata patch identity, absent from releases before this profile existed.
+    /// Artifact validation checks its checksum format before a consumer selects the release.
     package let filesystemMetadataPatchSHA256: String?
     /// The macro adapter preserves the upstream main-actor callback requirement.
     package let macroPatchSHA256: String

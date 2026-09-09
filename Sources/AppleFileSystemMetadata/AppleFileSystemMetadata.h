@@ -13,8 +13,9 @@ extern "C" {
 int swift_toolchain_is_local_path(const char *path, bool *result);
 
 /// Reads volume locality for LLVM's open-file mapping policy without taking ownership of the file.
-/// The descriptor must remain open during the call. The output is set only on success.
-/// Returns zero on success or a POSIX error code when the descriptor or its path cannot be read.
+/// The descriptor must remain open during the call and may refer to an unlinked file.
+/// Only mount flags are requested. The output is set only on success.
+/// Returns zero on success or a POSIX error code when descriptor metadata cannot be read.
 int swift_toolchain_is_local_fd(int descriptor, bool *result);
 
 #ifdef __cplusplus

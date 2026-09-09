@@ -1,10 +1,26 @@
 #include "AppleFileSystemMetadata.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <cerrno>
-#include <climits>
+#include <cstdint>
 #include <cstring>
-#include <fcntl.h>
+#include <sys/attr.h>
+#include <sys/mount.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
+namespace {
+
+/// The descriptor query returns only the supported-attribute mask and volume mount flags.
+struct VolumeMountFlags {
+  /// The kernel reports the number of bytes written so truncated metadata can be rejected.
+  std::uint32_t length;
+  /// The returned mask distinguishes an unsupported flag query from a nonlocal volume.
+  attribute_set_t returned;
+  /// LLVM's mapping policy consumes MNT_LOCAL without requesting volume capacity.
+  std::uint32_t flags;
+};
+
+} // namespace
 
 int swift_toolchain_is_local_path(const char *path, bool *result) {
   if (path == nullptr || result == nullptr) {
@@ -42,9 +58,17 @@ int swift_toolchain_is_local_fd(int descriptor, bool *result) {
   if (result == nullptr) {
     return EINVAL;
   }
-  char path[PATH_MAX];
-  if (fcntl(descriptor, F_GETPATH, path) != 0) {
+  struct attrlist attributes = {};
+  attributes.bitmapcount = ATTR_BIT_MAP_COUNT;
+  attributes.commonattr = ATTR_CMN_RETURNED_ATTRS;
+  attributes.volattr = ATTR_VOL_INFO | ATTR_VOL_MOUNTFLAGS;
+  VolumeMountFlags value = {};
+  if (fgetattrlist(descriptor, &attributes, &value, sizeof(value), 0) != 0) {
     return errno;
   }
-  return swift_toolchain_is_local_path(path, result);
+  if (value.length != sizeof(value) || (value.returned.volattr & ATTR_VOL_MOUNTFLAGS) == 0) {
+    return EIO;
+  }
+  *result = (value.flags & MNT_LOCAL) != 0;
+  return 0;
 }

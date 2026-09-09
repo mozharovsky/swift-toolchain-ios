@@ -87,6 +87,10 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/Notices.cmake")
+  add_test(NAME ArtifactNoticeSource
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-source-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NoticeSource.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()

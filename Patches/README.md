@@ -20,8 +20,9 @@ compiler output identities remain independent of this macro-only patch.
 
 `AppleFileSystemMetadata.patch` applies to LLVM commit
 `4e6cdf5caf79efbe1fab78387437ad6372c4b8df`. The iOS profile attaches a small adapter that reads
-volume locality through CoreFoundation resource metadata. Other LLVM platforms retain their
-existing implementation. Disk-capacity queries remain in LLVM's cache-pruning path.
+path locality through CoreFoundation resource metadata. Descriptor queries request only volume
+mount flags and remain valid after unlinking the file. Other LLVM platforms retain their existing
+implementation. Disk-capacity queries remain in LLVM's cache-pruning path.
 
 The adapter is covered by native contract tests and linked only when the profile selects it.
 Its source, configuration hook, and patch participate in the native cache identity. A changed
