@@ -9,9 +9,14 @@ add_swift_host_library(SwiftCompilerBridge SHARED
   "${CMAKE_CURRENT_LIST_DIR}/SwiftCompilerBridge.cpp"
   "${CMAKE_CURRENT_LIST_DIR}/NativeBackend.cpp")
 target_sources(SwiftCompilerBridge PRIVATE
-  "${TOOLCHAIN_SWIFT_SOURCE}/lib/DriverTool/autolink_extract_main.cpp")
+  "${TOOLCHAIN_SWIFT_SOURCE}/lib/DriverTool/autolink_extract_main.cpp"
+  "${CMAKE_CURRENT_LIST_DIR}/../NativeProfile/BundledPluginPolicy.cpp")
+target_include_directories(SwiftCompilerBridge PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../NativeProfile")
 target_include_directories(SwiftCompilerBridge PRIVATE "${TOOLCHAIN_LLVM_SOURCE}/lld/include")
 target_link_libraries(SwiftCompilerBridge PRIVATE swiftFrontendTool lldWasm lldCommon)
+if(APPLE)
+  target_link_libraries(SwiftCompilerBridge PRIVATE "-framework CoreFoundation")
+endif()
 set_target_properties(SwiftCompilerBridge PROPERTIES
   CXX_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN YES)
 

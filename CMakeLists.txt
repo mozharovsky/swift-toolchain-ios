@@ -27,6 +27,23 @@ if(BUILD_TESTING)
     target_link_options(CompilerBridgeContractTests PRIVATE -fsanitize=address,undefined)
   endif()
   add_test(NAME CompilerBridgeContract COMMAND CompilerBridgeContractTests)
+  add_executable(BundledPluginPolicyTests
+    Sources/NativeProfile/BundledPluginPolicy.cpp
+    Tests/NativeProfileTests/BundledPluginPolicyTests.cpp)
+  target_include_directories(BundledPluginPolicyTests PRIVATE Sources/NativeProfile)
+  target_compile_options(BundledPluginPolicyTests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+  if(TOOLCHAIN_ENABLE_SANITIZERS)
+    target_compile_options(BundledPluginPolicyTests PRIVATE
+      -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(BundledPluginPolicyTests PRIVATE -fsanitize=address,undefined)
+  endif()
+  if(APPLE)
+    set_target_properties(BundledPluginPolicyTests PROPERTIES MACOSX_BUNDLE TRUE
+      MACOSX_BUNDLE_GUI_IDENTIFIER org.swift.toolchain.native-profile-tests)
+    target_link_libraries(BundledPluginPolicyTests PRIVATE "-framework CoreFoundation")
+  endif()
+  add_test(NAME BundledPluginPolicy COMMAND BundledPluginPolicyTests)
+  set_tests_properties(BundledPluginPolicy PROPERTIES TIMEOUT 20)
   if(APPLE)
     add_executable(AppleFileSystemMetadataTests
       Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
@@ -51,6 +68,9 @@ if(BUILD_TESTING)
       "${CMAKE_SOURCE_DIR}/Sources/CompilerBridge/*.h"
       "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/MacroBridge/*.h"
+      "${CMAKE_SOURCE_DIR}/Sources/NativeProfile/*.cpp"
+      "${CMAKE_SOURCE_DIR}/Sources/NativeProfile/*.h"
+      "${CMAKE_SOURCE_DIR}/Tests/NativeProfileTests/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.cpp"
       "${CMAKE_SOURCE_DIR}/Sources/AppleFileSystemMetadata/*.h"
       "${CMAKE_SOURCE_DIR}/Tests/AppleFileSystemMetadataTests/*.cpp"
@@ -91,6 +111,9 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-source-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NoticeSource.cmake")
+  add_test(NAME NativeProfileImports
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NativeProfile.cmake")
   set_tests_properties(CompilerBridgeContract CompilerConfigurationInputs
     CompilerBridgeConfiguration PROPERTIES TIMEOUT 20)
 endif()

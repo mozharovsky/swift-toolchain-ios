@@ -1,4 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/Common.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/RestrictedNative.cmake")
 if(NOT EXISTS "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc")
   message(FATAL_ERROR "Set TOOLCHAIN_BOOTSTRAP_ROOT to the matching Swift release usr directory.")
 endif()

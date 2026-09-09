@@ -31,13 +31,48 @@ Fatal compiler failures can still terminate the process. The C++ boundary does n
 assertion, signal, or out-of-memory recovery. Frontend diagnostics are captured after compiler setup.
 Early setup errors and detailed object-reader errors may also use standard error.
 
+## Native profile
+
+The iOS recipes select a restricted native profile. LLVM and Swift process entry points return
+failures before spawning or replacing a process. Executable plugins and plugin search options
+produce frontend diagnostics. LLVM rejects additional library loads while retaining symbol lookup
+through its existing process handle.
+
+LLVM mapped-memory allocation and protection reject `MF_EXEC` with an operation-not-permitted
+error. Readable and writable data mappings retain their normal behavior. Instruction-cache
+invalidation is a no-op in this profile. Bundled framework images still use the platform loader.
+
+Macro selection uses explicit `-load-plugin-library` arguments or `-load-resolved-plugin`
+arguments with an empty executable-server field. Both use `-in-process-plugin-server-path`.
+Each library or in-process server path must resolve to a regular file at
+`Name.framework/Name` directly inside the main bundle's private frameworks directory.
+Executable plugins, external plugin servers, and plugin search directories are unavailable.
+Applications keep additional macro implementations in that same bundled framework layout.
+
+The compiler and library-plugin provider share a path validator in `SwiftCompilerBridge`.
+It returns an owned canonical path, which the loader opens. A mutable alias therefore cannot
+redirect that later open outside the bundle. The embedding application preserves its bundled
+files throughout compiler use, and the loader validates the library format. The validator reads
+bundle metadata without acquiring the compiler operation mutex, so main-actor macro callbacks
+can use it while the frontend is running.
+
+The native profile constrains these compiler entry points. Consumers still supply a trusted
+recipe and enforce their own source, filesystem, and resource limits. The profile does not add
+crash recovery or certify an application for distribution.
+
 ## Contract tests
 
 The small CMake target links the real C ABI wrapper to an explicitly named test backend. It checks
 C header linkage, argument validation, owned messages with embedded NUL bytes, ordinary error
 recovery, shared serialization, and sticky invalidation. `TOOLCHAIN_ENABLE_SANITIZERS` defaults to
-`OFF`. Setting it to `ON` instruments only the host test executable with ASan and UBSan.
+`OFF`. Setting it to `ON` instruments the bridge and bundled-plugin host tests with ASan and UBSan.
 `mise run native-check` enables this option. The test backend does not compile or interpret Swift.
 Its results are not compiler execution or physical-device evidence.
+
+The bundled-plugin tests exercise canonical paths and owned return buffers. They also change an
+alias after validation and verify that the returned path still opens the original bundled file.
+Separate upstream profile tests compile the patched process and memory implementations against
+matching host LLVM support archives. Those tests execute on the build machine and do not establish
+execution of the complete compiler on iPhone.
 
 The production Swift target links `NativeBackend.cpp`. The test backend is never part of that target.

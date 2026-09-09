@@ -12,6 +12,10 @@ The macro entry adapter preserves the upstream server's main-actor requirement. 
 synchronously use the main queue. Callers must keep that queue available while awaiting compiler
 work. The adapter does not add process isolation or recover from native macro crashes.
 
+The library-plugin provider links the compiler bridge's bundled-path validator. Both native
+loaders open the canonical path returned by that shared policy. Macro implementations and the
+in-process server use the flat framework layout described in [Compiler bridge](CompilerBridge.md).
+
 ## Preparation
 
 Start with a completed native compiler cache and the matching Swift release toolchain. Set
@@ -58,6 +62,11 @@ arm64 iOS slices. `Archives` contains ZIP files for SwiftPM binary targets. `Art
 records configuration, patch, SDK, archive, and executable identities. The generated `Package.swift`
 exposes one local `SwiftCompilerArtifacts` product for integration checks.
 
+The native profile records `restrictedSwiftPatchSHA256` and `restrictedLLVMPatchSHA256` with
+`bundledMacroPatchSHA256`. Metadata validation requires the complete group when any member is
+present and checks each digest's syntax. Earlier manifests can omit the group. Native receipts
+also bind the profile source and configuration so packaging cannot reuse a broader compiler build.
+
 `Development/MacroBuildSupport` contains native SwiftSyntax module metadata, matching support
 libraries, and open C-shim headers for building additional bundled macro implementations. Its ZIP
 has a separate manifest record and is not part of the app's SwiftPM product. This lets a consumer
@@ -92,8 +101,11 @@ are included in the same payload. Notice text preserves upstream terms and copyr
 
 Metadata verification checks names and version relationships. `VerifyArtifacts.cmake` independently
 extracts archives, checks byte hashes, validates platform markers and the native dependency closure,
-and restores each encoded SDK module to verify its original bytes. Application integration must also
-check the SDK after Xcode copies the frameworks. The configuration-only fixture and macro threading
+and restores each encoded SDK module to verify its original bytes. Packaging and archive validation
+reject imports for process creation and instruction-cache or JIT operations that the current native
+profile excludes. These checks permit the normal data-mapping and bundled-library APIs.
+Application integration must also check the SDK after Xcode copies the frameworks.
+The configuration-only fixture and macro threading
 fixture do not claim execution of the iOS compiler.
 
 A public release additionally needs reviewed archive contents and explicit publication. Preparation

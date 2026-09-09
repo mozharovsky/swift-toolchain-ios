@@ -38,14 +38,16 @@ Configuration validates the bootstrap release and creates the graph. It does not
 or start compiler builds. The default build also leaves those explicit targets untouched.
 
 Prepare source archives separately. CMake reuses a downloaded archive only when its SHA-256 matches.
-Each checkout is isolated by source identity. The Swift source identity also includes the patch hash.
+Each checkout is isolated by source identity. Swift and LLVM identities also include every patch
+applied to their sources.
 
 ```sh
 mise exec -- cmake --build .cache/compiler-plan --target toolchain-sources --parallel 2
 ```
 
-The source target extracts Swift, LLVM, SwiftSyntax, cmark, and string-processing archives and applies
-`DisableImmediateExecution.patch`. It does not fetch a consumer project or copy an Apple SDK.
+The source target extracts the pinned compiler inputs and applies their recorded patches.
+Those patches select the immediate-execution setting and the iOS filesystem and native profiles.
+Source preparation does not fetch a consumer project or copy an Apple SDK.
 
 The following is a large native build. Establish a CPU, disk, and memory budget before running it.
 Four jobs are allowed inside the active stage, native stages run in sequence, and LLVM and Swift
@@ -65,6 +67,29 @@ Compiler support libraries are under `swift-ios/lib/swift/host/compiler`. The in
 package
 XCFrameworks, install a target WASM SDK into an application, or produce the native macro-server
 bundle. Those artifact composition steps follow after the library build is validated.
+
+## Upstream profile checks
+
+The separate profile test project compiles the patched LLVM process, mapped-memory, and library
+implementations with Swift's patched process entry points. It checks their refusal behavior and
+ordinary data mappings on the build machine. It does not build the complete compiler.
+
+Set `TOOLCHAIN_LLVM_SOURCE` and `TOOLCHAIN_SWIFT_SOURCE` to their verified, patched source
+directories from source preparation. Set `LLVM_DIR` to `host-tools/lib/cmake/llvm` inside the
+configured native build root after building `host-tools`. The host support archives must match
+the pinned source revision. The test project adopts their RTTI and exception settings.
+
+```sh
+mise exec -- cmake -S Tests/NativeProfileTests/Upstream -B .cache/native-profile-check -G Ninja \
+  -DLLVM_DIR="$LLVM_DIR" \
+  -DTOOLCHAIN_LLVM_SOURCE="$TOOLCHAIN_LLVM_SOURCE" \
+  -DTOOLCHAIN_SWIFT_SOURCE="$TOOLCHAIN_SWIFT_SOURCE"
+mise exec -- cmake --build .cache/native-profile-check --parallel 4
+mise exec -- ctest --test-dir .cache/native-profile-check --output-on-failure
+```
+
+Run these checks after changing a native profile patch. A configuration or compile failure stops
+the relevant command. A failed runtime expectation produces a failing CTest result.
 
 ## Evidence boundaries
 

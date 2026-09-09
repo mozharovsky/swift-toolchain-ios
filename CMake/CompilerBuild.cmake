@@ -20,11 +20,14 @@ set(TOOLCHAIN_SOURCE_ROOT "${TOOLCHAIN_CACHE_ROOT}/sources")
 include("${CMAKE_CURRENT_LIST_DIR}/Inputs.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/NativeLibraries.cmake")
 file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_digest)
-string(SHA256 input_digest "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}")
+string(SHA256 input_digest
+  "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}")
 set(TOOLCHAIN_BUILD_ROOT "${TOOLCHAIN_CACHE_ROOT}/build/${input_digest}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${TOOLCHAIN_LOCK_FILE}" "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
-  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch")
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch"
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
 
 execute_process(COMMAND "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc" --version
   OUTPUT_VARIABLE bootstrap_version COMMAND_ERROR_IS_FATAL ANY)
@@ -38,10 +41,14 @@ foreach(name IN LISTS TOOLCHAIN_SOURCE_NAMES)
   set(patch_command "")
   if(name STREQUAL "swift")
     set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch")
+      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
+      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --input
+      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch")
   elseif(name STREQUAL "llvm-project")
     set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch")
+      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
+      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --input
+      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
   endif()
   ExternalProject_Add(source-${name}
     PREFIX "${TOOLCHAIN_CACHE_ROOT}/projects/${TOOLCHAIN_${name}_IDENTITY}"
@@ -95,6 +102,10 @@ function(toolchain_native_stage name source profile)
   if(name STREQUAL "llvm-ios")
     list(APPEND configuration_inputs
       "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeAppleFileSystemMetadata.cmake")
+  endif()
+  if(name STREQUAL "llvm-ios" OR name STREQUAL "swift-ios")
+    list(APPEND configuration_inputs
+      "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/RestrictedNative.cmake")
   endif()
   toolchain_watch_configuration(${name} ${configuration_inputs})
 endfunction()

@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactInputs.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/VerifyNativeProfile.cmake")
 find_program(TOOLCHAIN_ARCHIVE_TOOL NAMES ditto PATHS /usr/bin NO_DEFAULT_PATH REQUIRED)
 if(NOT DEFINED TOOLCHAIN_ARTIFACT_OUTPUT OR NOT IS_ABSOLUTE "${TOOLCHAIN_ARTIFACT_OUTPUT}")
   message(FATAL_ERROR "Set TOOLCHAIN_ARTIFACT_OUTPUT to a new absolute ignored output directory.")
@@ -14,10 +15,12 @@ if(NOT EXISTS "${TOOLCHAIN_MACRO_OUTPUT}/libSwiftInProcPluginServer.dylib")
   message(FATAL_ERROR "Run BuildMacros.cmake before packaging compiler artifacts.")
 endif()
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch" bundled_macro_patch)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
-string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
+string(SHA256 macro_identity
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}")
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib)
 toolchain_verify_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
@@ -74,6 +77,7 @@ set(package_targets "")
 set(product_targets "")
 foreach(name IN LISTS names)
   set(framework "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/${name}.framework")
+  toolchain_verify_native_profile("${framework}/${name}")
   set(xcframework "${TOOLCHAIN_ARTIFACT_OUTPUT}/XCFrameworks/${name}.xcframework")
   execute_process(COMMAND xcodebuild -create-xcframework -framework "${framework}"
     -output "${xcframework}" COMMAND_ERROR_IS_FATAL ANY)
@@ -122,6 +126,9 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"configurationSHA256\": \"${lock_checksum}\",\n"
   "  \"frontendPatchSHA256\": \"${TOOLCHAIN_PATCH_SHA256}\",\n"
   "  \"filesystemMetadataPatchSHA256\": \"${TOOLCHAIN_METADATA_PATCH_SHA256}\",\n"
+  "  \"restrictedSwiftPatchSHA256\": \"${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}\",\n"
+  "  \"restrictedLLVMPatchSHA256\": \"${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}\",\n"
+  "  \"bundledMacroPatchSHA256\": \"${bundled_macro_patch}\",\n"
   "  \"macroPatchSHA256\": \"${macro_patch_checksum}\",\n"
   "  \"producerRevision\": \"${producer_revision}\",\n"
   "  \"producerHasUncommittedChanges\": ${producer_dirty},\n"

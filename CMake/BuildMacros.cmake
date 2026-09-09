@@ -38,6 +38,8 @@ set(common -emit-library -emit-module -parse-as-library -O -whole-module-optimiz
   -file-prefix-map "${TOOLCHAIN_REPOSITORY_ROOT}=/toolchain/producer"
   -L "${TOOLCHAIN_COMPILER_LIBRARIES}" -L "${TOOLCHAIN_MACRO_OUTPUT}"
   -I "${TOOLCHAIN_MACRO_OUTPUT}"
+  -I "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/NativeProfile"
+  -D SWIFT_TOOLCHAIN_RESTRICTED_NATIVE
   -I "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/_SwiftLibraryPluginProviderCShims/include"
   -I "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/_SwiftSyntaxCShims/include" ${module_paths}
   -Xlinker -headerpad_max_install_names -Xlinker -rpath -Xlinker @loader_path)
@@ -49,6 +51,12 @@ configure_file(
 execute_process(COMMAND patch -p1 --forward --input
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch"
   WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source" COMMAND_ERROR_IS_FATAL ANY)
+configure_file(
+  "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/SwiftLibraryPluginProvider/LibraryPluginProvider.swift"
+  "${TOOLCHAIN_MACRO_OUTPUT}/Source/LibraryPluginProvider.swift" COPYONLY)
+execute_process(COMMAND patch -p1 --forward --input
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch"
+  WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source" COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND xcrun --sdk iphoneos clang++ -std=c++17 -O2 -fvisibility=hidden
   -target "${TOOLCHAIN_COMPILER_HOST}" -isysroot "${sdk}"
   "-ffile-prefix-map=${TOOLCHAIN_REPOSITORY_ROOT}=/toolchain/producer"
@@ -57,11 +65,13 @@ execute_process(COMMAND xcrun --sdk iphoneos clang++ -std=c++17 -O2 -fvisibility
 
 foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
   set(link_name "${name}")
+  set(extra_links "")
   if(name STREQUAL "SwiftLibraryPluginProvider")
     set(link_name _CompilerSwiftLibraryPluginProvider)
   endif()
   if(name STREQUAL "SwiftLibraryPluginProvider")
-    set(sources "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/SwiftLibraryPluginProvider/LibraryPluginProvider.swift")
+    set(sources "${TOOLCHAIN_MACRO_OUTPUT}/Source/LibraryPluginProvider.swift")
+    set(extra_links -L "${TOOLCHAIN_SWIFT_BUILD}/lib" -lSwiftCompilerBridge)
   elseif(name STREQUAL "SwiftInProcPluginServer")
     set(sources "${TOOLCHAIN_MACRO_OUTPUT}/Source/InProcPluginServer.swift"
       "${TOOLCHAIN_MACRO_OUTPUT}/MacroEntry.o")
@@ -72,14 +82,16 @@ foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacro
     -module-name "${name}" -module-link-name "${link_name}" -Xfrontend -module-abi-name -Xfrontend "${link_name}"
     -emit-module-path "${TOOLCHAIN_MACRO_OUTPUT}/${name}.swiftmodule"
     -Xlinker -install_name -Xlinker "@rpath/lib${link_name}.dylib"
-    -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${link_name}.dylib" ${sources}
+    -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${link_name}.dylib" ${sources} ${extra_links}
     COMMAND_ERROR_IS_FATAL ANY)
 endforeach()
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch" bundled_macro_patch)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
-string(SHA256 macro_identity "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${adapter}${adapter_header}${recipe}")
+string(SHA256 macro_identity
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}")
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib)
 toolchain_record_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
