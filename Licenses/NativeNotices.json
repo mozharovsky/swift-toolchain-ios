@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "component": "llvm-project",
+      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "sourcePath": "llvm/lib/Support/xxhash.cpp",
+      "startLine": 1,
+      "endLine": 33,
+      "path": "Native/xxHash.txt",
+      "sha256": "7bd80c2f259838bb5966cc3386e738431abbfc25a12d4d2d851433422bd60f6f",
+      "upstreamTextSHA256": "4eca3924b5c7daab59e93307726c44b21de2de1b0df21acf0f6a62f48f149891",
+      "sourceSHA256": "b47e89a65e40f34c7e336a58f1902c958b7bd90b3370bd497c8cb788eb40c2d4"
+    },
+    {
+      "component": "llvm-project",
+      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "sourcePath": "llvm/lib/Support/regcomp.c",
+      "startLine": 1,
+      "endLine": 36,
+      "path": "Native/LLVMRegex.txt",
+      "sha256": "cdc26e92a4245afc77c9dc76436669b74b7d90e19ebea5f4736c5ce645e07b17",
+      "upstreamTextSHA256": "44988ade80a58015fbc236273afe55e6b67335b60cea16221f039611bc415889",
+      "sourceSHA256": "20059e9f66b59f964a60a90d328e853551a7adb1d5b9a10740abd56912ae584b"
+    },
+    {
+      "component": "llvm-project",
+      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "sourcePath": "llvm/lib/Support/ConvertUTF.cpp",
+      "startLine": 8,
+      "endLine": 44,
+      "path": "Native/ConvertUTF.txt",
+      "sha256": "fa0c0bdba366b82dd669f8e23d7c6d3db22db97e9091023fdfbdf7086343f03e",
+      "upstreamTextSHA256": "2355f8ab91787f152998ecaef1744356a22b98ac80d6babaf95e3de99d7c7d25",
+      "sourceSHA256": "d425e131c4c1e59ad19139ba7bdbebb2cb78cd5253b568b0359001bf08a8a25e"
+    }
+  ]
+}

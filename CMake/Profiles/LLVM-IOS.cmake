@@ -1,5 +1,8 @@
 include("${CMAKE_CURRENT_LIST_DIR}/Common.cmake")
 
+set(CMAKE_PROJECT_LLVM_INCLUDE "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeAppleFileSystemMetadata.cmake"
+  CACHE FILEPATH "Volume-locality checks use Apple's resource metadata API." FORCE)
+
 set(CMAKE_MAKE_PROGRAM "${TOOLCHAIN_NINJA}" CACHE FILEPATH "The local Ninja executable." FORCE)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "The libraries use optimization without debug information." FORCE)
 set(LLVM_PARALLEL_LINK_JOBS 1 CACHE STRING "Archive and executable links share one build slot." FORCE)

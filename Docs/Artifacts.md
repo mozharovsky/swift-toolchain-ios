@@ -64,6 +64,24 @@ has a separate manifest record and is not part of the app's SwiftPM product. Thi
 update its own native macro library without rebuilding the compiler or shipping build-only inputs
 in the application.
 
+`Licenses/NativeNotices.json` records additional license text selected from pinned native source
+files. These entries include the xxHash, regular-expression, and Unicode conversion notices within
+LLVM. Packaging verifies the source-file and notice hashes before adding the entries to
+`NativeSources.json`. Archive verification checks every copied notice in both native and target
+inventories.
+
+The compiler framework declares file metadata access for container-scoped source and module loading.
+Its disk-space declaration covers LLVM's cache pruning when the consumer enables an on-disk linker
+cache. That path removes cached files based on available capacity before retaining more output.
+These declarations require compiler inputs and caches to stay within the consumer's containers.
+Consumers must keep capacity metadata and capacity-derived cache diagnostics on the device.
+
+The iOS profile queries volume locality through CoreFoundation resource metadata. This keeps the
+file mapping policy independent of capacity queries. `AppleFileSystemMetadata.patch` selects that
+adapter without changing LLVM's other platform implementations. A new native build is required
+after this patch or its adapter changes. The native receipt and release manifest record the patch
+identity. Older artifact manifests may omit that field.
+
 SDK resources live inside `SwiftCompilerSDK.framework/Payload`. Serialized Swift modules are stored
 as Base64 data because Xcode strips native-module filenames during artifact processing. The
 `Materialization.json` records original module paths and digests for restoration by the consumer.
