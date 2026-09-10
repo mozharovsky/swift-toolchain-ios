@@ -47,6 +47,9 @@ in Swift. Shell files pass ShellCheck and shfmt without suppressions added to ma
 contend over one scratch directory. CI uses separate jobs for quality, Linux build and tests, macOS
 build and tests, documentation, pull request commit metadata, and the native bridge contract.
 
+`Scripts/check-history-fixtures.sh` imports disposable Git histories and exercises the same history
+adapter used by the commit-policy job. Local checks and both platform test jobs run this probe.
+
 SwiftFormat, SwiftLint, ShellCheck, shfmt, CMake, and Ninja use pinned versions and archive identities
 in `mise.lock`.
 The complete mise installation and download cache is retained together in CI. A tool cache hit must
@@ -64,8 +67,20 @@ authorize the GitHub application.
 
 ## Contributions
 
-Use scoped Conventional Commits under 72 characters with a body explaining the reason and a
-DCO sign-off in the final trailer block. Other trailers may follow the sign-off within that block.
+Non-merge commits use scoped Conventional Commits under 72 characters with a body explaining the
+reason and a DCO sign-off in the final trailer block. Other trailers may follow the sign-off within
+that block.
+
+CI exempts every commit with two or more parents from these message requirements, including merges
+with manual conflict resolutions. The exception uses parent count. An ordinary commit receives the
+full check regardless of its subject or author.
+
+`Scripts/check-history.sh` accepts a Git repository directory followed by the base and head revisions.
+It checks non-merge commits reachable from the head and absent from the base history. Git traverses
+every parent history, so ordinary commits introduced through a merged side branch remain checked.
+The adapter runs the already built CLI from this repository's Swift package. A range containing only
+merge commits succeeds with zero messages. Invalid Git revisions still fail the adapter.
+
 Review fixes use new commits. Pull request descriptions explain the resulting behavior
 and validation. Record unverified platforms and deferred work without implying those checks passed.
 Humans merge changes after required checks and review findings are resolved.

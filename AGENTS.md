@@ -62,11 +62,13 @@ those recipes land. A source-only validation result is not proof of a rebuilt co
 
 ## History and review
 
-Commit subjects and pull request titles use `type(scope): subject` and contain fewer than 72
+Non-merge commit subjects and pull request titles use `type(scope): subject` and contain fewer than 72
 characters. Allowed types are `feat`, `fix`, `docs`, `refactor`, `test`, `perf`, `ci`, `build`, and
 `chore`. Scopes are `compiler`, `backend`, `bridge`, `sdk`, `macros`, `tools`, `ci`, and `docs`.
-Each commit explains why the change is needed and includes `Signed-off-by` in its final trailer block.
-Other trailers may follow the sign-off within that block.
+Each non-merge commit explains why the change is needed and includes `Signed-off-by` in its final
+trailer block. Other trailers may follow the sign-off within that block. CI exempts commits with two
+or more parents from these message requirements so GitHub can update a pull request by merging
+its base branch. Ordinary commits from every merged branch remain subject to the full policy.
 
 Use small stacked changes through `gh stack` when publishing a pull request stack. Every branch
 must pass its applicable checks. A human performs merges. Follow the pull request template.
