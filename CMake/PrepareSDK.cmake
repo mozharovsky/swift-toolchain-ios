@@ -1,4 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/ModuleCodec.cmake")
 if(NOT EXISTS "${TOOLCHAIN_SDK_ARCHIVE}")
   message(FATAL_ERROR "Provide the checksum-pinned SDK archive before packaging.")
 endif()
@@ -33,6 +34,7 @@ file(WRITE "${payload}/Compatibility.json"
   "  \"target\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n  \"revision\": \"${sdk_version}\"\n}\n")
 
 # Xcode strips serialized native-module filenames even when they are guest compiler input data.
+toolchain_prepare_module_codec(module_codec)
 set(modules "[]")
 set(index 0)
 file(GLOB_RECURSE module_files LIST_DIRECTORIES FALSE "${payload}/*.swiftmodule")
@@ -41,7 +43,8 @@ foreach(module IN LISTS module_files)
   file(RELATIVE_PATH path "${payload}" "${module}")
   string(REGEX REPLACE "\\.swiftmodule$" ".compilerdata" encoded "${path}")
   file(SHA256 "${module}" checksum)
-  execute_process(COMMAND /usr/bin/base64 -i "${module}" -o "${payload}/${encoded}"
+  file(SIZE "${module}" decoded_bytes)
+  execute_process(COMMAND "${module_codec}" module-codec compress "${module}" "${payload}/${encoded}"
     COMMAND_ERROR_IS_FATAL ANY)
   file(REMOVE "${module}")
   toolchain_json_string(path_json "${path}")
@@ -49,6 +52,7 @@ foreach(module IN LISTS module_files)
   string(JSON record SET "{}" path "${path_json}")
   string(JSON record SET "${record}" encodedPath "${encoded_json}")
   string(JSON record SET "${record}" sha256 "\"${checksum}\"")
+  string(JSON record SET "${record}" decodedByteCount "${decoded_bytes}")
   string(JSON modules SET "${modules}" ${index} "${record}")
   math(EXPR index "${index} + 1")
 endforeach()
@@ -63,7 +67,7 @@ foreach(file IN LISTS payload_files)
 endforeach()
 string(SHA256 identity "${identity_input}")
 file(WRITE "${payload}/Materialization.json"
-  "{\"schemaVersion\":1,\"identity\":\"${identity}\",\"modules\":${modules}}\n")
+  "{\"schemaVersion\":2,\"encoding\":\"lzfse\",\"identity\":\"${identity}\",\"modules\":${modules}}\n")
 configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.h.in"
   "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h" @ONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.m.in"

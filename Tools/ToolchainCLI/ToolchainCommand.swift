@@ -1,15 +1,16 @@
 import ArgumentParser
 
-/// Maintenance entry point that leaves native compiler production an explicit later operation.
+/// Maintenance entry point for validated build inputs, repository history, and module resources.
 @main
 struct ToolchainCommand: ParsableCommand {
-    /// ArgumentParser exposes only implemented, bounded repository checks.
+    /// ArgumentParser keeps bounded maintenance separate from native compiler production.
     static let configuration = CommandConfiguration(
         commandName: "toolchain",
-        abstract: "Validate source inputs and repository metadata for the iOS Swift toolchain.",
+        abstract: "Validate and prepare inputs for the iOS Swift toolchain.",
         subcommands: [
             VerifyCommand.self,
             VerifyArtifactManifestCommand.self,
+            ModuleCodecCommand.self,
             CheckCommitCommand.self,
             CheckHistoryCommand.self,
             CheckRepositoryCommand.self,

@@ -99,8 +99,16 @@ after this patch or its adapter changes. The native receipt and release manifest
 identity. Older artifact manifests may omit that field.
 
 SDK resources live inside `SwiftCompilerSDK.framework/Payload`. Serialized Swift modules are stored
-as Base64 data because Xcode strips native-module filenames during artifact processing. The
-`Materialization.json` records original module paths and digests for restoration by the consumer.
+as binary LZFSE resources because Xcode strips native-module filenames during artifact processing.
+`Materialization.json` uses schema version 2 and declares `encoding` as `lzfse`. Each module record
+contains its original path, encoded path, SHA-256, and `decodedByteCount`. A module must decode to
+exactly that byte count, from 1 through 128 MiB, before the consumer checks its original digest.
+Consumers that support only the earlier Base64 schema must update before adopting these artifacts.
+Independent archive verification also accepts schema version 1 for existing Base64 releases.
+
+Packaging and verification build the maintenance executable and use its `module-codec` command.
+Apple's Compression framework supplies LZFSE. This host-side operation does not rebuild the native
+compiler or modify the module's restored bytes.
 The remaining SDK contents keep the open toolchain layout. License texts and their source identities
 are included in the same payload. Notice text preserves upstream terms and copyright statements. Trailing whitespace is normalized, and the index records both the original selected-text digest and the packaged-file digest.
 

@@ -7,6 +7,10 @@ The configuration validator checks fixed source revisions and the SDK archive id
 download those sources or prove that a compiler build succeeds. Repository policy rejects generated
 artifacts from Git's source inventory. Commit validation is shared by the local hook and CI.
 
+``ModuleCompression`` encodes serialized modules with Apple's LZFSE codec for artifact packaging.
+Archive verification restores modules into a bounded output buffer before checking their digests.
+Module conversion requires an Apple platform. Metadata and repository validation also run on Linux.
+
 ## Topics
 
 ### Build inputs
@@ -20,6 +24,7 @@ artifacts from Git's source inventory. Commit validation is shared by the local 
 - ``ArtifactManifest``
 - ``CompilerArtifact``
 - ``MacroBuildSupport``
+- ``ModuleCompression``
 
 ### Repository checks
 
