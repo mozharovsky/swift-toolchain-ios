@@ -12,6 +12,17 @@ import Testing
             .decode(encoded, expectedByteCount: original.count) == original)
     }
 
+    /// Verifies that packaging accepts both inclusive serialized-module size boundaries.
+    ///
+    /// - Parameter count: The original and restored byte count, either 1 or the 128 MiB limit.
+    /// - Throws: Compression or restoration failures while checking the accepted boundaries.
+    @Test(arguments: [1, ModuleCompression.maximumDecodedBytes])
+    func compressedModulesAcceptSizeBoundaries(count: Int) throws {
+        let original = Data(repeating: 42, count: count)
+        let encoded = try ModuleCompression.encode(original)
+        #expect(try ModuleCompression.decode(encoded, expectedByteCount: count) == original)
+    }
+
     /// A full output buffer must not make a truncated module look complete.
     @Test(arguments: [-1, 1])
     func compressedModulesRejectWrongDecodedSize(offset: Int) throws {
