@@ -4,6 +4,11 @@ package import Foundation
 #endif
 
 /// An LZFSE module codec used by artifact packaging and independent archive verification.
+///
+/// Both operations require Apple's Compression framework. Original and restored modules must
+/// contain 1 byte through `maximumDecodedBytes`. Invalid bounds, unsupported hosts, and codec
+/// failures use `ToolchainError.invalidArtifact`. Callers verify the original digest after
+/// decoding.
 package enum ModuleCompression {
     /// The 128 MiB output limit enforced by packaging and archive verification for each module.
     package static let maximumDecodedBytes = 128 * 1024 * 1024
