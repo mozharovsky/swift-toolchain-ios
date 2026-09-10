@@ -3,9 +3,7 @@ import Testing
 
 /// Commit cases that distinguish real DCO trailers from body text and incomplete messages.
 struct CommitMessageTests {
-    /// Merge filtering can leave no messages while still describing a valid Git range.
-    ///
-    /// - Throws: History validation rejects an empty stream.
+    /// Checks that CI's empty selected history succeeds with zero validated messages.
     @Test func acceptsEmptyHistory() throws {
         #expect(try CommitMessage.validateHistory("") == 0)
     }
