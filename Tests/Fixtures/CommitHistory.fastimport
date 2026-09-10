@@ -1,0 +1,94 @@
+commit refs/heads/main
+mark :1
+committer History Fixture <fixture@example.com> 1 +0000
+data <<MESSAGE
+Seed the excluded base history
+MESSAGE
+
+commit refs/heads/feature
+mark :2
+committer History Fixture <fixture@example.com> 2 +0000
+data <<MESSAGE
+fix(ci): record a signed change
+
+Keep the fixture limited to commit metadata.
+
+Signed-off-by: History Fixture <fixture@example.com>
+MESSAGE
+from :1
+
+commit refs/heads/main
+mark :3
+committer History Fixture <fixture@example.com> 3 +0000
+data <<MESSAGE
+Advance the excluded base branch
+MESSAGE
+from :1
+
+commit refs/heads/feature
+mark :4
+committer History Fixture <fixture@example.com> 4 +0000
+data <<MESSAGE
+Merge branch 'main' into feature
+MESSAGE
+from :2
+merge :3
+
+commit refs/heads/unsigned
+mark :5
+committer History Fixture <fixture@example.com> 5 +0000
+data <<MESSAGE
+fix(ci): omit the sign-off
+
+Keep the fixture limited to commit metadata.
+
+Reviewed-by: History Reviewer <reviewer@example.com>
+MESSAGE
+from :3
+
+commit refs/heads/message-merge
+mark :6
+committer History Fixture <fixture@example.com> 6 +0000
+data <<MESSAGE
+Merge branch 'main' into feature
+MESSAGE
+from :3
+
+commit refs/heads/side
+mark :7
+committer History Fixture <fixture@example.com> 7 +0000
+data <<MESSAGE
+fix(ci): omit the side sign-off
+
+Keep the fixture limited to commit metadata.
+
+Reviewed-by: History Reviewer <reviewer@example.com>
+MESSAGE
+from :3
+
+commit refs/heads/merged-side
+mark :8
+committer History Fixture <fixture@example.com> 8 +0000
+data <<MESSAGE
+Merge branch 'side' into feature
+MESSAGE
+from :2
+merge :7
+
+commit refs/heads/merge-only
+mark :9
+committer History Fixture <fixture@example.com> 9 +0000
+data <<MESSAGE
+Merge branch 'main' into an ancestor branch
+MESSAGE
+from :1
+merge :3
+
+commit refs/heads/empty-message
+mark :10
+committer History Fixture <fixture@example.com> 10 +0000
+data <<MESSAGE
+MESSAGE
+from :3
+
+done

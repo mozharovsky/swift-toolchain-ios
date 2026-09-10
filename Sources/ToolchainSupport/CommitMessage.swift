@@ -2,8 +2,28 @@ import Foundation
 
 /// Commit checks shared by the local hook and CI's complete-message stream.
 package enum CommitMessage {
+    /// Validates the complete messages selected by CI's Git history adapter.
+    ///
+    /// - Parameter source: NUL-separated messages with their bodies and trailers preserved.
+    ///   A final delimiter is optional. An empty record is an invalid empty commit message.
+    /// - Returns: The number of validated messages. An empty history returns zero.
+    /// - Throws: `ToolchainError.invalidCommit` when any message fails the repository policy.
+    package static func validateHistory(_ source: String) throws(ToolchainError) -> Int {
+        guard !source.isEmpty else { return 0 }
+        var messages = source.split(separator: "\0", omittingEmptySubsequences: false)
+        if source.hasSuffix("\0") { messages.removeLast() }
+        for message in messages {
+            try validate(String(message))
+        }
+        return messages.count
+    }
+
     /// Repository history requires a scoped subject, a reason, and a DCO entry in its final trailer
     /// block.
+    ///
+    /// - Parameter source: One complete commit message, including its subject and final trailers.
+    /// - Throws: `ToolchainError.invalidCommit` when the subject, reason, or final sign-off is
+    /// invalid.
     package static func validate(_ source: String) throws(ToolchainError) {
         let lines = source.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let subject = lines.first ?? ""

@@ -3,6 +3,52 @@ import Testing
 
 /// Commit cases that distinguish real DCO trailers from body text and incomplete messages.
 struct CommitMessageTests {
+    /// Merge filtering can leave no messages while still describing a valid Git range.
+    ///
+    /// - Throws: History validation rejects an empty stream.
+    @Test func acceptsEmptyHistory() throws {
+        #expect(try CommitMessage.validateHistory("") == 0)
+    }
+
+    /// Git's NUL delimiters preserve each reason and final trailer block in a complete history.
+    ///
+    /// - Parameter trailingDelimiter: Whether Git's final message terminator is present.
+    /// - Throws: History validation rejects either complete message.
+    @Test(arguments: [false, true])
+    func acceptsCompleteHistory(trailingDelimiter: Bool) throws {
+        let source = Self.validMessage + "\0" + Self.validMessage
+            + (trailingDelimiter ? "\0" : "")
+        #expect(try CommitMessage.validateHistory(source) == 2)
+    }
+
+    /// An empty commit record must not disappear among otherwise valid messages.
+    ///
+    /// - Parameter position: The empty record's index before, between, or after valid records.
+    @Test(arguments: [0, 1, 2])
+    func rejectsEmptyHistoryRecord(position: Int) {
+        var messages = [Self.validMessage, Self.validMessage]
+        messages.insert("", at: position)
+        #expect(throws: ToolchainError.self) {
+            try CommitMessage.validateHistory(messages.joined(separator: "\0") + "\0")
+        }
+    }
+
+    /// Git emits a NUL record for a selected empty message instead of an empty stream.
+    @Test func rejectsSingleEmptyHistoryRecord() {
+        #expect(throws: ToolchainError.self) {
+            try CommitMessage.validateHistory("\0")
+        }
+    }
+
+    /// A preceding valid commit cannot hide an incomplete message later in the stream.
+    @Test func rejectsIncompleteHistory() {
+        #expect(throws: ToolchainError.invalidCommit(
+            "Separate the subject from a body that explains the change.",
+        )) {
+            try CommitMessage.validateHistory(Self.validMessage + "\0fix(ci): incomplete message\0")
+        }
+    }
+
     /// A valid message carries its reason before a final block of Git trailers.
     @Test func acceptsCompleteMessage() throws {
         try CommitMessage.validate(Self.validMessage)

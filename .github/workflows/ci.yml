@@ -45,6 +45,7 @@ jobs:
           key: support-linux-${{ hashFiles('Package.resolved', '.swift-version') }}
       - run: swift build
       - run: swift test
+      - run: Scripts/check-history-fixtures.sh
       - run: swift run --skip-build toolchain verify
       - run: git ls-files -z | swift run --skip-build toolchain check-repository
 
@@ -64,6 +65,7 @@ jobs:
           key: support-macos-xcode26.6-${{ hashFiles('Package.resolved', '.swift-version') }}
       - run: swift build
       - run: swift test
+      - run: Scripts/check-history-fixtures.sh
       - run: swift run --skip-build toolchain verify
       - run: git ls-files -z | swift run --skip-build toolchain check-repository
 
@@ -95,9 +97,9 @@ jobs:
           persist-credentials: false
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: swift build
-      - name: Check complete commit messages and DCO trailers
+      - name: Check non-merge commit messages and DCO trailers
         shell: bash
-        run: git log --format=%B -z "$PR_BASE..$PR_HEAD" | swift run --skip-build toolchain check-history
+        run: Scripts/check-history.sh . "$PR_BASE" "$PR_HEAD"
 
   native:
     name: Native bridge contract
