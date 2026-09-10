@@ -5,8 +5,7 @@ package import Foundation
 
 /// An LZFSE module codec used by artifact packaging and independent archive verification.
 package enum ModuleCompression {
-    /// Decoding accepts at most 128 MiB per module so corrupt metadata cannot request unbounded
-    /// output.
+    /// The 128 MiB output limit enforced by packaging and archive verification for each module.
     package static let maximumDecodedBytes = 128 * 1024 * 1024
 
     /// Compresses one serialized module without changing the bytes restored by consumers.
@@ -41,7 +40,7 @@ package enum ModuleCompression {
     /// `maximumDecodedBytes`.
     /// - Returns: Decoded bytes whose count equals the declared size.
     /// - Throws: `ToolchainError.invalidArtifact` for unsupported hosts, invalid sizes, malformed
-    ///   compressed data, or output that does not match the declared size.
+    ///   compressed data, trailing bytes, or output that does not match the declared size.
     package static func decode(
         _ encoded: Data,
         expectedByteCount: Int,
@@ -59,9 +58,27 @@ package enum ModuleCompression {
                     guard let destination = output.bindMemory(to: UInt8.self).baseAddress,
                           let source = input.bindMemory(to: UInt8.self).baseAddress
                     else { return 0 }
-                    return compression_decode_buffer(
-                        destination, output.count, source, input.count, nil, COMPRESSION_LZFSE,
+                    var stream = compression_stream(
+                        dst_ptr: destination, dst_size: 0, src_ptr: source, src_size: 0, state: nil,
                     )
+                    guard compression_stream_init(
+                        &stream, COMPRESSION_STREAM_DECODE, COMPRESSION_LZFSE,
+                    ) == COMPRESSION_STATUS_OK else { return 0 }
+                    defer { compression_stream_destroy(&stream) }
+                    stream.dst_ptr = destination
+                    stream.dst_size = output.count
+                    stream.src_ptr = source
+                    // Holding back one byte exposes an early end despite the decoder's input
+                    // buffering.
+                    stream.src_size = input.count - 1
+                    guard compression_stream_process(&stream, 0) == COMPRESSION_STATUS_OK
+                    else { return 0 }
+                    stream.src_size += 1
+                    let status = compression_stream_process(
+                        &stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue),
+                    )
+                    guard status == COMPRESSION_STATUS_END, stream.src_size == 0 else { return 0 }
+                    return output.count - stream.dst_size
                 }
             }
             guard count == expectedByteCount else {

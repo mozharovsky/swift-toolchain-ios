@@ -10,11 +10,11 @@ struct ModuleCodecCommand: ParsableCommand {
         abstract: "Compress or restore one serialized module with LZFSE on an Apple platform.",
     )
 
-    /// The operation determines whether the input contains serialized bytes or compressed data.
+    /// The conversion parsed by ArgumentParser and executed by `run()` on the input file.
     @Argument(help: "Select compress or decompress.")
     var operation: Operation
 
-    /// The input is read without changing the source module or archive resource.
+    /// The existing input path read by `run()` without changing the module or archive resource.
     @Argument(help: "Path to the existing input file.")
     var source: String
 
@@ -26,17 +26,22 @@ struct ModuleCodecCommand: ParsableCommand {
     @Option(help: "Exact restored byte count, required for decompression and limited to 128 MiB.")
     var decodedBytes: Int?
 
-    /// Converts the explicit input and writes a new file only after the codec succeeds.
+    /// Converts a packaging or verification input and writes a new file after the codec succeeds.
     ///
-    /// - Throws: `ToolchainError` when arguments conflict, file access fails, the destination
-    /// exists,
-    ///   or the module codec rejects the platform, representation, or declared output size.
+    /// - Throws: `ToolchainError.unreadableFile` when the source cannot be read, or
+    ///   `ToolchainError.invalidArtifact` for conflicting arguments, output file errors,
+    ///   or an unsupported platform, representation, or declared output size.
     mutating func run() throws(ToolchainError) {
         guard (operation == .decompress) == (decodedBytes != nil) else {
             throw .invalidArtifact("Provide --decoded-bytes only when decompressing a module.")
         }
+        let input: Data
         do {
-            let input = try Data(contentsOf: URL(fileURLWithPath: source))
+            input = try Data(contentsOf: URL(fileURLWithPath: source))
+        } catch {
+            throw .unreadableFile(source)
+        }
+        do {
             let output: Data
             switch operation {
             case .compress:
@@ -55,7 +60,7 @@ struct ModuleCodecCommand: ParsableCommand {
         }
     }
 
-    /// File conversion direction parsed independently of the caller's filename extensions.
+    /// A file conversion direction parsed by ArgumentParser independently of filename extensions.
     enum Operation: String, ExpressibleByArgument {
         /// Packaging stores an LZFSE representation of the original module.
         case compress

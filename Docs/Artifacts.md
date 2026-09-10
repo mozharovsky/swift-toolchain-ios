@@ -31,6 +31,7 @@ mise exec -- cmake \
   -P CMake/BuildMacros.cmake
 mise exec -- cmake \
   -DTOOLCHAIN_NATIVE_CACHE="$TOOLCHAIN_NATIVE_CACHE" \
+  -DTOOLCHAIN_BOOTSTRAP_ROOT="$TOOLCHAIN_BOOTSTRAP_ROOT" \
   -DTOOLCHAIN_MACRO_OUTPUT="$TOOLCHAIN_MACRO_OUTPUT" \
   -DTOOLCHAIN_SDK_ARCHIVE="$TOOLCHAIN_SDK_ARCHIVE" \
   -DTOOLCHAIN_ARTIFACT_OUTPUT="$TOOLCHAIN_ARTIFACT_OUTPUT" \
@@ -38,6 +39,7 @@ mise exec -- cmake \
   -P CMake/PackageArtifacts.cmake
 swift run toolchain verify-artifact-manifest "$TOOLCHAIN_ARTIFACT_OUTPUT/ArtifactManifest.json"
 mise exec -- cmake -DTOOLCHAIN_ARTIFACT_OUTPUT="$TOOLCHAIN_ARTIFACT_OUTPUT" \
+  -DTOOLCHAIN_BOOTSTRAP_ROOT="$TOOLCHAIN_BOOTSTRAP_ROOT" \
   -P CMake/VerifyArtifacts.cmake
 ```
 
@@ -103,10 +105,13 @@ as binary LZFSE resources because Xcode strips native-module filenames during ar
 `Materialization.json` uses schema version 2 and declares `encoding` as `lzfse`. Each module record
 contains its original path, encoded path, SHA-256, and `decodedByteCount`. A module must decode to
 exactly that byte count, from 1 through 128 MiB, before the consumer checks its original digest.
+Archive verification requires one complete LZFSE stream and rejects trailing encoded bytes.
 Consumers that support only the earlier Base64 schema must update before adopting these artifacts.
 Independent archive verification also accepts schema version 1 for existing Base64 releases.
 
 Packaging and verification build the maintenance executable and use its `module-codec` command.
+Both operations select Swift from `TOOLCHAIN_BOOTSTRAP_ROOT` and require the release recorded in
+`Toolchain.lock.json` before building the codec.
 Apple's Compression framework supplies LZFSE. This host-side operation does not rebuild the native
 compiler or modify the module's restored bytes.
 The remaining SDK contents keep the open toolchain layout. License texts and their source identities

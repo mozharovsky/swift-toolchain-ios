@@ -1,6 +1,6 @@
 import ArgumentParser
 
-/// Maintenance entry point for validated build inputs, repository history, and module resources.
+/// The command-line entry point used by packaging and repository checks for bounded maintenance.
 @main
 struct ToolchainCommand: ParsableCommand {
     /// ArgumentParser keeps bounded maintenance separate from native compiler production.

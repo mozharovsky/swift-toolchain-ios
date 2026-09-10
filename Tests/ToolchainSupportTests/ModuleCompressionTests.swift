@@ -36,6 +36,19 @@ import Testing
             }
         }
     }
+
+    /// Rejects encoded suffixes that leave the restored module bytes unchanged.
+    @Test func compressedModulesRejectTrailingData() throws {
+        let original = Data(repeating: 42, count: 4096)
+        let encoded = try ModuleCompression.encode(original)
+        for suffix in [Data([0]), encoded] {
+            #expect(throws: ToolchainError.invalidArtifact(
+                "The LZFSE module does not match its declared decoded size.",
+            )) {
+                try ModuleCompression.decode(encoded + suffix, expectedByteCount: original.count)
+            }
+        }
+    }
 #else
     /// Metadata-only hosts report unsupported compression without adding a substitute codec.
     @Test func compressedModulesRequireAppleCompression() throws {
