@@ -23,6 +23,10 @@ The initial producer requires an Apple silicon Mac, the selected Xcode SDK, and 
 matching `swiftVersion` in the lock file. `TOOLCHAIN_BOOTSTRAP_ROOT` is that release toolchain's
 `usr` directory. The repository does not choose or replace the machine's Xcode installation.
 
+Swift 6.4.0 archives use three numeric components while the standalone compiler reports
+`Swift 6.4 (swift-6.4-RELEASE)`. Bootstrap validation accepts either complete release spelling.
+It rejects Xcode builds, development snapshots, and a different patch release.
+
 Configure the explicit compiler targets after selecting those tools. The command below uses the
 caller's `TOOLCHAIN_BOOTSTRAP_ROOT` environment variable as an input path.
 

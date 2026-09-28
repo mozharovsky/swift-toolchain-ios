@@ -1,0 +1,22 @@
+include_guard(GLOBAL)
+
+# Release archives retain a zero patch component that the compiler banner can omit.
+# Each accepted numeric spelling must carry its own matching standalone release tag.
+function(toolchain_matches_swift_release output text version)
+  set(versions "${version}")
+  if(version MATCHES "^([0-9]+\\.[0-9]+)\\.0$")
+    list(APPEND versions "${CMAKE_MATCH_1}")
+  endif()
+  string(REPLACE "\r\n" "\n" normalized "${text}")
+  string(REPLACE "\n" ";" lines "${normalized}")
+  foreach(candidate IN LISTS versions)
+    set(banner "Swift version ${candidate} (swift-${candidate}-RELEASE)")
+    foreach(line IN LISTS lines)
+      if(line STREQUAL banner OR line STREQUAL "Apple ${banner}")
+        set(${output} TRUE PARENT_SCOPE)
+        return()
+      endif()
+    endforeach()
+  endforeach()
+  set(${output} FALSE PARENT_SCOPE)
+endfunction()

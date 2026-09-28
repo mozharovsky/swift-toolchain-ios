@@ -1,5 +1,11 @@
 --- a/InProcPluginServer.swift
 +++ b/InProcPluginServer.swift
-@@ -37 +37 @@
+@@ -34,7 +34,7 @@
+ /// function with the same message as `swift-plugin-server`.
+ ///
+ /// The caller must `free` the returned buffer
 -@_cdecl("swift_inproc_plugins_handle_message")
 +@_cdecl("swift_toolchain_macro_message_on_main_actor")
+ @MainActor
+ public func handleMessage(
+   _ inputData: UnsafePointer<UInt8>!,

@@ -1,7 +1,7 @@
 # Contributing
 
-Use Swift 6.3 or later. macOS maintenance checks use Xcode 26.6 in CI. Linux checks use the pinned
-Swift 6.3.2 container. Native compiler production will be a separate operation from routine checks.
+Use Swift 6.3 or later. macOS maintenance checks use Xcode 27.0 build 27A266a in CI. Linux checks
+use the pinned Swift 6.4.0 container. Native compiler production is separate from routine checks.
 
 ## Local setup
 
@@ -35,3 +35,7 @@ you certify the
 Use small stacked changes when a feature needs several reviewable steps. Follow the pull request
 template and report checks that could not run. Resolve review findings with new signed commits.
 Maintainers perform merges and release publication.
+
+Compiler production additionally requires the standalone Swift 6.4.0 release and its matching
+WebAssembly SDK. Select Xcode through `DEVELOPER_DIR` and keep the machine's global selection
+unchanged.

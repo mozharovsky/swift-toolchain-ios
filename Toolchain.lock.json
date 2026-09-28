@@ -1,29 +1,29 @@
 {
   "schemaVersion": 1,
-  "swiftVersion": "6.3.2",
+  "swiftVersion": "6.4.0",
   "compilerHost": "arm64-apple-ios18.0",
   "programTarget": "wasm32-unknown-wasip1",
   "sources": [
     {
       "name": "swift",
       "repository": "https://github.com/swiftlang/swift.git",
-      "revision": "cd8d8ad0019e4e291906b311e0d25d7039cddc9c",
+      "revision": "b8189d766d86ad7fc8106787d6ce9e402f38dd72",
       "license": "Apache-2.0 WITH Swift-exception",
-      "archiveSHA256": "7b67785f8969cc765ad2300e6350cce0196bbe4f0386e24cdf8ae7524cc310b9"
+      "archiveSHA256": "e8c3a9053c10906b492ceeb175e1e6c2d0693a0863a6fafee638b182ae97d3ee"
     },
     {
       "name": "llvm-project",
       "repository": "https://github.com/swiftlang/llvm-project.git",
-      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "revision": "903b9faaae5c43ecc9b7e33f8db9c94c7429374a",
       "license": "Apache-2.0 WITH LLVM-exception",
-      "archiveSHA256": "70e6e342b9505d5cf912f3368620fe665eb8a177a1f5b843f31a253c1827d1c0"
+      "archiveSHA256": "b18a9af1b0a41d38b309d76b5e2fab5bc1b60a06aed95063c9256c5d6815ddf8"
     },
     {
       "name": "swift-syntax",
       "repository": "https://github.com/swiftlang/swift-syntax.git",
-      "revision": "2b59c0c741e9184ab057fd22950b491076d42e91",
+      "revision": "050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf",
       "license": "Apache-2.0 WITH Swift-exception",
-      "archiveSHA256": "93459f39912d4820f27fe31bed50bee62c66f79c0ab71bbac368c4b790d8d12b"
+      "archiveSHA256": "2112986ef9432364bc75f400e501138eadb3719cb43d15fb861c67d8286f0ad6"
     },
     {
       "name": "swift-cmark",
@@ -35,14 +35,14 @@
     {
       "name": "string-processing",
       "repository": "https://github.com/swiftlang/swift-experimental-string-processing.git",
-      "revision": "efe8986824694c53fd5e94a4c634f20b3682baeb",
+      "revision": "bf9cd9a0cfb0481f0825509aeb81ff3135bac250",
       "license": "Apache-2.0 WITH Swift-exception",
-      "archiveSHA256": "aead577e21e3ec1d00cd3bd0fcc21af6df1037243d4d3890d20cd1c10dc825de"
+      "archiveSHA256": "5579ce5ca464037f2d3247ea52228693ea853892b18f3157402afe904270a7fe"
     }
   ],
   "sdk": {
-    "version": "swift-6.3.2-RELEASE_wasm",
-    "url": "https://download.swift.org/swift-6.3.2-release/wasm-sdk/swift-6.3.2-RELEASE/swift-6.3.2-RELEASE_wasm.artifactbundle.tar.gz",
-    "sha256": "a61f0584c93283589f8b2f42db05c1f9a182b506c2957271402992655591dd7c"
+    "version": "swift-6.4.0-RELEASE_wasm",
+    "url": "https://download.swift.org/swift-6.4.0-release/wasm-sdk/swift-6.4.0-RELEASE/swift-6.4.0-RELEASE_wasm.artifactbundle.tar.gz",
+    "sha256": "f07b7be3c586d92d7a07051fc6d303b87ebea67eadc40640ba59d5a8b79aa86d"
   }
 }

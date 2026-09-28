@@ -1,5 +1,6 @@
 include(ExternalProject)
 include("${CMAKE_CURRENT_LIST_DIR}/ConfigurationInputs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
 
 if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "arm64")
   message(FATAL_ERROR "Native compiler production currently requires an Apple silicon Mac.")
@@ -31,8 +32,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 
 execute_process(COMMAND "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc" --version
   OUTPUT_VARIABLE bootstrap_version COMMAND_ERROR_IS_FATAL ANY)
-string(REPLACE "." "\\." version_pattern "${TOOLCHAIN_SWIFT_VERSION}")
-if(NOT bootstrap_version MATCHES "Swift version ${version_pattern}([ \n]|$)")
+toolchain_matches_swift_release(bootstrap_matches "${bootstrap_version}" "${TOOLCHAIN_SWIFT_VERSION}")
+if(NOT bootstrap_matches)
   message(FATAL_ERROR "The bootstrap compiler must match Swift ${TOOLCHAIN_SWIFT_VERSION}.")
 endif()
 
@@ -40,14 +41,14 @@ set(source_targets "")
 foreach(name IN LISTS TOOLCHAIN_SOURCE_NAMES)
   set(patch_command "")
   if(name STREQUAL "swift")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --input
+    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
       "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --input
+      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
       "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch")
   elseif(name STREQUAL "llvm-project")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --input
+    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
       "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --input
+      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
       "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
   endif()
   ExternalProject_Add(source-${name}

@@ -121,7 +121,7 @@
  LoadedExecutablePlugin::PluginProcess::~PluginProcess() {
 --- a/lib/Frontend/CompilerInvocation.cpp
 +++ b/lib/Frontend/CompilerInvocation.cpp
-@@ -40,6 +40,11 @@
+@@ -41,6 +41,11 @@
  #include "llvm/Support/VersionTuple.h"
  #include "llvm/Support/WithColor.h"
  #include "llvm/TargetParser/Triple.h"
@@ -133,7 +133,7 @@
  
  using namespace swift;
  using namespace llvm::opt;
-@@ -2404,8 +2409,20 @@
+@@ -2466,8 +2471,20 @@
    }
    Opts.setFrameworkSearchPaths(FrameworkSearchPaths);
  
@@ -155,7 +155,7 @@
  
    // All plugin search options, i.e. '-load-plugin-library',
    // '-load-plugin-executable', '-plugin-path', and  '-external-plugin-path'
-@@ -2413,10 +2430,29 @@
+@@ -2475,10 +2492,29 @@
    // e.g. For '-plugin-path A -load-plugin-library B/libModule.dylib', if
    // 'A/libModule.dylib' exists, it's used.
    for (const Arg *A : Args.filtered(OPT_plugin_search_Group)) {
@@ -185,7 +185,7 @@
        break;
      }
      case OPT_load_plugin_executable: {
-@@ -2465,7 +2501,24 @@
+@@ -2527,7 +2563,24 @@
            (libraryPath.empty() && executablePath.empty())) {
          Diags.diagnose(SourceLoc(), diag::error_load_resolved_plugin,
                         A->getValue());
@@ -212,7 +212,7 @@
          moduleNames.emplace_back(name);
 --- a/include/swift/AST/DiagnosticsFrontend.def
 +++ b/include/swift/AST/DiagnosticsFrontend.def
-@@ -144,6 +144,12 @@
+@@ -150,6 +150,12 @@
  ERROR(error_no_source_location_scope_map,none,
        "-dump-scope-maps argument must be 'expanded' or a list of "
        "source locations", ())

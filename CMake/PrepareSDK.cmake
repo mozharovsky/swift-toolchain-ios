@@ -81,4 +81,5 @@ execute_process(COMMAND xcrun --sdk iphoneos clang -target "${TOOLCHAIN_COMPILER
   -o "${framework}/SwiftCompilerSDK" COMMAND_ERROR_IS_FATAL ANY)
 toolchain_framework_module("${framework}" SwiftCompilerSDK "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h")
 toolchain_framework_plist("${framework}" SwiftCompilerSDK)
-message(STATUS "Prepared the verified WASM SDK and ${index} serialized module inputs.")
+string(JSON module_count LENGTH "${modules}")
+message(STATUS "Prepared the verified WASM SDK and ${module_count} serialized module inputs.")
