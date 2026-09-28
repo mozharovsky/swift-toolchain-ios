@@ -1,4 +1,5 @@
 include_guard(GLOBAL)
+include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
 
 # Packaging and verification use the declared bootstrap release for their maintenance executable.
 function(toolchain_module_codec_swift output)
@@ -11,8 +12,8 @@ function(toolchain_module_codec_swift output)
   string(JSON expected_version GET "${inputs}" swiftVersion)
   execute_process(COMMAND "${compiler}" --version OUTPUT_VARIABLE version
     COMMAND_ERROR_IS_FATAL ANY)
-  string(REPLACE "." "\\." version_pattern "${expected_version}")
-  if(NOT version MATCHES "Swift version ${version_pattern}([ \n]|$)")
+  toolchain_matches_swift_release(bootstrap_matches "${version}" "${expected_version}")
+  if(NOT bootstrap_matches)
     message(FATAL_ERROR "The module codec bootstrap must match Swift ${expected_version}.")
   endif()
   set(${output} "${compiler}" PARENT_SCOPE)

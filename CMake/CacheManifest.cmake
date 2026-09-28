@@ -11,7 +11,7 @@ function(toolchain_native_identity output)
     Sources/NativeProfile/SwiftToolchainPluginPolicy.h Sources/NativeProfile/module.modulemap
     Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
     Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.h
-    CMake/Profiles/Common.cmake CMake/Profiles/HostTools.cmake CMake/Profiles/LLVM-IOS.cmake
+    CMake/SwiftRelease.cmake CMake/Profiles/Common.cmake CMake/Profiles/HostTools.cmake CMake/Profiles/LLVM-IOS.cmake
     CMake/Profiles/CmarkIOS.cmake CMake/Profiles/SwiftIOS.cmake CMake/NativeLibraries.cmake
     CMake/IncludeBridge.cmake CMake/CompilerSupportModules.cmake Sources/CompilerBridge/CMakeLists.txt
     Sources/CompilerBridge/SwiftCompilerBridge.cpp Sources/CompilerBridge/SwiftCompilerBridge.h

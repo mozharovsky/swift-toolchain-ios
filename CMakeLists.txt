@@ -105,6 +105,12 @@ if(BUILD_TESTING)
     add_test(NAME NativeSourceFormatting
       COMMAND "${TOOLCHAIN_XCRUN}" clang-format --dry-run --Werror ${native_sources})
   endif()
+  add_test(NAME SwiftReleaseIdentity
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/SwiftRelease.cmake")
+  add_test(NAME UpstreamPatchContexts
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/PatchContexts.cmake")
   add_test(NAME CompilerConfigurationInputs
     COMMAND "${CMAKE_COMMAND}"
       "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"

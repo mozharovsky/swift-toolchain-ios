@@ -3,7 +3,7 @@
   "sources": [
     {
       "component": "llvm-project",
-      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "revision": "903b9faaae5c43ecc9b7e33f8db9c94c7429374a",
       "sourcePath": "llvm/lib/Support/xxhash.cpp",
       "startLine": 1,
       "endLine": 33,
@@ -14,7 +14,7 @@
     },
     {
       "component": "llvm-project",
-      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "revision": "903b9faaae5c43ecc9b7e33f8db9c94c7429374a",
       "sourcePath": "llvm/lib/Support/regcomp.c",
       "startLine": 1,
       "endLine": 36,
@@ -25,7 +25,7 @@
     },
     {
       "component": "llvm-project",
-      "revision": "4e6cdf5caf79efbe1fab78387437ad6372c4b8df",
+      "revision": "903b9faaae5c43ecc9b7e33f8db9c94c7429374a",
       "sourcePath": "llvm/lib/Support/ConvertUTF.cpp",
       "startLine": 8,
       "endLine": 44,

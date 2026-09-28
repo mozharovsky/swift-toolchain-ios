@@ -1,0 +1,21 @@
+include("${TOOLCHAIN_SOURCE_DIR}/CMake/SwiftRelease.cmake")
+
+# Numeric aliases remain valid only with a complete standalone release identity.
+function(check_release version banner expected)
+  toolchain_matches_swift_release(actual "${banner}" "${version}")
+  if(NOT actual STREQUAL expected)
+    message(FATAL_ERROR "Unexpected identity result for ${version} and ${banner}.")
+  endif()
+endfunction()
+
+check_release("6.4.0" "Apple Swift version 6.4 (swift-6.4-RELEASE)\nTarget: arm64-apple-macosx27.0\n" TRUE)
+check_release("6.4.0" "Swift version 6.4.0 (swift-6.4.0-RELEASE)\r\nTarget: x86_64-unknown-linux-gnu\r\n" TRUE)
+check_release("6.3.2" "Swift version 6.3.2 (swift-6.3.2-RELEASE)" TRUE)
+check_release("6.4.0" "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)" FALSE)
+check_release("6.4.0" "Swift version 6.4" FALSE)
+check_release("6.4.0" "Swift version 6.4.1 (swift-6.4.1-RELEASE)" FALSE)
+check_release("6.4.0" "Swift version 6.40 (swift-6.40-RELEASE)" FALSE)
+check_release("6.4.0" "Swift version 6.4-dev (swift-6.4-DEVELOPMENT-SNAPSHOT)" FALSE)
+check_release("6.4.0" "Swift version 6.4 (swift-6.4.1-RELEASE)" FALSE)
+check_release("6.4.0" "Unable to read Swift version 6.4 (swift-6.4-RELEASE)" FALSE)
+check_release("6.3.2" "Swift version 6.3 (swift-6.3-RELEASE)" FALSE)

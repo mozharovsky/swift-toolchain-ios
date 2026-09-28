@@ -1,7 +1,7 @@
 # Compiler patches
 
 `DisableImmediateExecution.patch` applies to Swift commit
-`cd8d8ad0019e4e291906b311e0d25d7039cddc9c`. It makes immediate native execution an optional frontend
+`b8189d766d86ad7fc8106787d6ce9e402f38dd72`. It makes immediate native execution an optional frontend
 build dependency. The iOS profile disables that option while retaining parsing, type checking,
 optimization, object emission, and macro infrastructure.
 
@@ -9,7 +9,8 @@ The upstream default remains enabled. A disabled build reports a compiler diagno
 execution. This patch does not establish that every unused process or dynamic-loading path has been
 removed from the resulting library. Those paths need a separate artifact audit.
 
-The producer applies exact line hunks to the checksum-pinned source archive after extraction. A changed patch receives a
+The producer applies contextual hunks without fuzz to the checksum-pinned source archive after
+extraction. A changed patch receives a
 different source identity so it cannot silently reuse an earlier patched tree. Swift's license and
 Runtime Library Exception are retained in `Licenses/Swift.txt`.
 
@@ -19,7 +20,7 @@ original name and invokes the upstream handler on its required main actor. Compi
 compiler output identities remain independent of this macro-only patch.
 
 `AppleFileSystemMetadata.patch` applies to LLVM commit
-`4e6cdf5caf79efbe1fab78387437ad6372c4b8df`. The iOS profile attaches a small adapter that reads
+`903b9faaae5c43ecc9b7e33f8db9c94c7429374a`. The iOS profile attaches a small adapter that reads
 path locality through CoreFoundation resource metadata. Descriptor queries request only volume
 mount flags and remain valid after unlinking the file. Other LLVM platforms retain their existing
 implementation. Disk-capacity queries remain in LLVM's cache-pruning path.
@@ -43,7 +44,7 @@ search forms produce diagnostics. The dynamic loader uses the canonical path ret
 producer's shared bundled-plugin validator.
 
 `BundledMacroLibraries.patch` applies to SwiftSyntax commit
-`2b59c0c741e9184ab057fd22950b491076d42e91`. Macro preparation applies it to a copied
+`050f1a346fbbac0ca2cfb15a95274f7bd1cf0ccf`. Macro preparation applies it to a copied
 `LibraryPluginProvider.swift` file. The provider calls the same validator through a private C module
 and opens its returned canonical path. This keeps plugin messages subject to the compiler's path
 policy. The provider also handles an absent loader-error string without a forced unwrap.

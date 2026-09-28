@@ -1,55 +1,114 @@
 --- a/lib/FrontendTool/CMakeLists.txt
 +++ b/lib/FrontendTool/CMakeLists.txt
-@@ -1,0 +2,3 @@
+@@ -1,4 +1,7 @@
+ 
 +option(SWIFT_ENABLE_IMMEDIATE_EXECUTION
 +  "Build immediate native execution into the frontend." ON)
 +
-@@ -18 +20,0 @@
+ add_swift_host_library(swiftFrontendTool STATIC
+   FrontendTool.cpp
+   ImportedModules.cpp
+@@ -15,7 +18,6 @@
+     swiftDemangling
+     swiftDependencyScan
+     swiftFrontend
 -    swiftImmediate
-@@ -29,0 +32,6 @@
+     swiftIndex
+     swiftIRGen
+     swiftMigrator
+@@ -27,6 +29,12 @@
+     swiftSILOptimizer
+     swiftThreading)
+ 
 +target_compile_definitions(swiftFrontendTool PRIVATE
 +  SWIFT_ENABLE_IMMEDIATE_EXECUTION=$<BOOL:${SWIFT_ENABLE_IMMEDIATE_EXECUTION}>)
 +if(SWIFT_ENABLE_IMMEDIATE_EXECUTION)
 +  target_link_libraries(swiftFrontendTool PRIVATE swiftImmediate)
 +endif()
 +
+ if (SWIFT_BUILD_SWIFT_SYNTAX)
+   target_link_libraries(swiftFrontendTool PRIVATE
+     swiftASTGen)
 --- a/lib/FrontendTool/FrontendTool.cpp
 +++ b/lib/FrontendTool/FrontendTool.cpp
-@@ -66,0 +67,5 @@
+@@ -64,7 +64,13 @@
+ #include "swift/Frontend/ModuleInterfaceSupport.h"
+ #include "swift/FrontendTool/Dependencies.h"
+ #include "swift/IRGen/TBDGen.h"
 +#ifndef SWIFT_ENABLE_IMMEDIATE_EXECUTION
 +#define SWIFT_ENABLE_IMMEDIATE_EXECUTION 1
 +#endif
 +
 +#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
-@@ -67,0 +73 @@
+ #include "swift/Immediate/Immediate.h"
 +#endif
-@@ -1320,0 +1327 @@
+ #include "swift/Index/IndexRecord.h"
+ #include "swift/Migrator/FixitFilter.h"
+ #include "swift/Migrator/Migrator.h"
+@@ -1430,6 +1436,7 @@
+                                   return Instance.getASTContext().hadError();
+                                 });
+   case FrontendOptions::ActionType::Immediate: {
 +#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
-@@ -1332,0 +1340,5 @@
+     const auto &Ctx = Instance.getASTContext();
+     if (Ctx.LangOpts.hasFeature(Feature::LazyImmediate)) {
+       ReturnValue = RunImmediatelyFromAST(Instance);
+@@ -1442,6 +1449,11 @@
+           return performCompileStepsPostSema(Instance, ReturnValue, observer,
+                                              CommandLineArgs);
+         });
 +#else
 +    Instance.getDiags().diagnose(SourceLoc(), diag::immediate_execution_disabled);
 +    ReturnValue = 1;
 +    return true;
 +#endif
-@@ -1806,0 +1819 @@
+   }
+   case FrontendOptions::ActionType::EmitSILGen:
+   case FrontendOptions::ActionType::EmitSIBGen:
+@@ -1918,6 +1930,7 @@
+       parallelIROutputFilenames, &HashGlobal, casBackend, cacheKeyForJob);
+ }
+ 
 +#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
-@@ -1828,0 +1842,2 @@
+ static bool processCommandLineAndRunImmediately(CompilerInstance &Instance,
+                                                 std::unique_ptr<SILModule> &&SM,
+                                                 ModuleOrSourceFile MSF,
+@@ -1940,6 +1953,8 @@
+                      std::move(SM));
+   return Instance.getASTContext().hadError();
+ }
 +
 +#endif
-@@ -2151 +2166,2 @@
+ 
+ static bool validateTBDIfNeeded(const CompilerInvocation &Invocation,
+                                 ModuleOrSourceFile MSF,
+@@ -2280,9 +2295,16 @@
+   if (Action == FrontendOptions::ActionType::DumpTypeInfo)
+     return performDumpTypeInfo(IRGenOpts, *SM);
+ 
 -  if (Action == FrontendOptions::ActionType::Immediate)
 +  if (Action == FrontendOptions::ActionType::Immediate) {
 +#if SWIFT_ENABLE_IMMEDIATE_EXECUTION
-@@ -2153,0 +2170,6 @@
+     return processCommandLineAndRunImmediately(
+         Instance, std::move(SM), MSF, observer, ReturnValue);
 +#else
 +    Instance.getDiags().diagnose(SourceLoc(), diag::immediate_execution_disabled);
 +    ReturnValue = 1;
 +    return true;
 +#endif
 +  }
+ 
+   StringRef OutputFilename = PSPs.OutputFilename;
+   std::vector<std::string> ParallelOutputFilenames =
 --- a/include/swift/AST/DiagnosticsFrontend.def
 +++ b/include/swift/AST/DiagnosticsFrontend.def
-@@ -29,0 +30,3 @@
+@@ -30,6 +30,9 @@
+ ERROR(error_no_frontend_args, none,
+       "no arguments provided to '-frontend'", ())
+ 
 +ERROR(immediate_execution_disabled, none,
 +      "immediate execution is disabled in this compiler build", ())
 +
+ ERROR(error_no_such_file_or_directory,none,
+       "no such file or directory: '%0'", (StringRef))
+ 

@@ -1,4 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactInputs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
 if(NOT DEFINED TOOLCHAIN_MACRO_OUTPUT OR NOT IS_ABSOLUTE "${TOOLCHAIN_MACRO_OUTPUT}")
   message(FATAL_ERROR "Set TOOLCHAIN_MACRO_OUTPUT to an absolute ignored output directory.")
 endif()
@@ -7,8 +8,8 @@ if(NOT EXISTS "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc")
 endif()
 execute_process(COMMAND "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc" --version
   OUTPUT_VARIABLE version COMMAND_ERROR_IS_FATAL ANY)
-string(REPLACE "." "\\." version_pattern "${TOOLCHAIN_SWIFT_VERSION}")
-if(NOT version MATCHES "Swift version ${version_pattern}([ \n]|$)")
+toolchain_matches_swift_release(bootstrap_matches "${version}" "${TOOLCHAIN_SWIFT_VERSION}")
+if(NOT bootstrap_matches)
   message(FATAL_ERROR "The macro bootstrap compiler must match Swift ${TOOLCHAIN_SWIFT_VERSION}.")
 endif()
 file(MAKE_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}" "${TOOLCHAIN_MACRO_OUTPUT}/Source")
@@ -48,13 +49,13 @@ set(common -emit-library -emit-module -parse-as-library -O -whole-module-optimiz
 configure_file(
   "${TOOLCHAIN_SWIFT_SOURCE}/tools/swift-plugin-server/Sources/SwiftInProcPluginServer/InProcPluginServer.swift"
   "${TOOLCHAIN_MACRO_OUTPUT}/Source/InProcPluginServer.swift" COPYONLY)
-execute_process(COMMAND patch -p1 --forward --input
+execute_process(COMMAND patch -p1 --forward --fuzz=0 --input
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch"
   WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source" COMMAND_ERROR_IS_FATAL ANY)
 configure_file(
   "${TOOLCHAIN_SYNTAX_SOURCE}/Sources/SwiftLibraryPluginProvider/LibraryPluginProvider.swift"
   "${TOOLCHAIN_MACRO_OUTPUT}/Source/LibraryPluginProvider.swift" COPYONLY)
-execute_process(COMMAND patch -p1 --forward --input
+execute_process(COMMAND patch -p1 --forward --fuzz=0 --input
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch"
   WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source" COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND xcrun --sdk iphoneos clang++ -std=c++17 -O2 -fvisibility=hidden
@@ -78,7 +79,7 @@ foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacro
   else()
     file(GLOB sources "${TOOLCHAIN_SWIFT_SOURCE}/lib/Macros/Sources/${name}/*.swift")
   endif()
-  execute_process(COMMAND "${compiler}" ${common}
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E env "SDKROOT=${sdk}" "${compiler}" ${common}
     -module-name "${name}" -module-link-name "${link_name}" -Xfrontend -module-abi-name -Xfrontend "${link_name}"
     -emit-module-path "${TOOLCHAIN_MACRO_OUTPUT}/${name}.swiftmodule"
     -Xlinker -install_name -Xlinker "@rpath/lib${link_name}.dylib"

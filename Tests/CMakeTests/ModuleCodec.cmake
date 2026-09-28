@@ -10,7 +10,7 @@ file(WRITE "${probe}"
 # Version-only fixtures check compiler selection without starting a Swift build.
 function(write_swift root version)
   file(MAKE_DIRECTORY "${root}/bin")
-  file(WRITE "${root}/bin/swift" "#!/bin/sh\nprintf '%s\\n' 'Swift version ${version}'\n")
+  file(WRITE "${root}/bin/swift" "#!/bin/sh\nprintf '%s\\n' 'Swift version ${version} (swift-${version}-RELEASE)'\n")
   file(CHMOD "${root}/bin/swift" PERMISSIONS
     OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endfunction()
