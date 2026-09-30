@@ -43,8 +43,9 @@ mise exec -- cmake -S . -B .cache/compiler-plan -G Ninja \
 Set `TOOLCHAIN_PLATFORM=simulator` and use a separate CMake plan directory to build the simulator
 variant. The default is `device`. Both plans can share `TOOLCHAIN_CACHE_ROOT` for pinned source
 archives. Native objects and receipts live in separate `device` and `simulator` build directories. The
-native receipt identity includes the selected platform. Each plan owns its source preparation
-metadata so switching plans does not repeat source patching. Never run both plans against shared source
+native receipt identity includes the selected platform. Source preparation uses one shared CMake
+graph for each pinned source identity. Its completion stamps prevent extraction and patching when
+a second native plan first consumes that source tree. Never run both plans against shared source
 preparation concurrently.
 
 Configuration validates the bootstrap release and creates the graph. It does not download sources

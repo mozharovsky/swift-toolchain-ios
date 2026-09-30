@@ -23,16 +23,19 @@ foreach(plan device simulator)
     "-DSOURCE_ROOT=${TOOLCHAIN_SOURCE_DIR}" "-DTEST_ROOT=${TOOLCHAIN_TEST_ROOT}"
     "-DTEST_CHECKSUM=${checksum}" COMMAND_ERROR_IS_FATAL ANY)
 endforeach()
-foreach(plan device simulator)
-  execute_process(COMMAND "${CMAKE_COMMAND}" --build "${TOOLCHAIN_TEST_ROOT}/${plan}"
-    --target source-fixture COMMAND_ERROR_IS_FATAL ANY)
-endforeach()
-foreach(plan device simulator device)
+execute_process(COMMAND "${CMAKE_COMMAND}" --build "${TOOLCHAIN_TEST_ROOT}/device"
+  --target source-fixture COMMAND_ERROR_IS_FATAL ANY)
+set(sentinel "${TOOLCHAIN_TEST_ROOT}/cache/sources/fixture-v1/preparation-sentinel")
+file(WRITE "${sentinel}" "Preserve the prepared source tree.\n")
+foreach(plan simulator device simulator device)
   execute_process(COMMAND "${CMAKE_COMMAND}" --build "${TOOLCHAIN_TEST_ROOT}/${plan}"
     --target source-fixture OUTPUT_VARIABLE output ERROR_VARIABLE error
     RESULT_VARIABLE status)
   if(NOT status EQUAL 0 OR output MATCHES "download step|patch step")
     message(FATAL_ERROR "Switching native plans repeated source preparation. ${output} ${error}")
+  endif()
+  if(NOT EXISTS "${sentinel}")
+    message(FATAL_ERROR "Switching native plans replaced the prepared source tree.")
   endif()
 endforeach()
 file(READ "${TOOLCHAIN_TEST_ROOT}/cache/sources/fixture-v1/source.txt" contents)

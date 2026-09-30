@@ -1,34 +1,18 @@
-include(ExternalProject)
-
-# Plans share source bytes while retaining their own Ninja step timestamps.
+# A shared preparation graph keeps first-time native plans from replacing prepared source trees.
 function(toolchain_add_source name)
-  set(patch_command "")
-  if(name STREQUAL "swift")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch")
-  elseif(name STREQUAL "llvm-project")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
-  endif()
-  ExternalProject_Add(source-${name}
-    PREFIX "${CMAKE_BINARY_DIR}/source-projects/${TOOLCHAIN_${name}_IDENTITY}"
-    SOURCE_DIR "${TOOLCHAIN_${name}_SOURCE}"
-    DOWNLOAD_DIR "${TOOLCHAIN_CACHE_ROOT}/downloads"
-    DOWNLOAD_NAME "${name}-${TOOLCHAIN_${name}_REVISION}.tar.gz"
-    URL "${TOOLCHAIN_${name}_URL}"
-    URL_HASH "SHA256=${TOOLCHAIN_${name}_SHA256}"
-    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-    TLS_VERIFY TRUE
-    TIMEOUT 300
-    INACTIVITY_TIMEOUT 30
-    UPDATE_COMMAND ""
-    PATCH_COMMAND ${patch_command}
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-    EXCLUDE_FROM_ALL TRUE)
+  set(preparation "${TOOLCHAIN_CACHE_ROOT}/source-projects/${TOOLCHAIN_${name}_IDENTITY}")
+  add_custom_target(source-${name}
+    COMMAND "${CMAKE_COMMAND}" -S "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SourcePreparation"
+      -B "${preparation}" -G "${CMAKE_GENERATOR}"
+      "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+      "-DTOOLCHAIN_REPOSITORY_ROOT=${TOOLCHAIN_REPOSITORY_ROOT}"
+      "-DTOOLCHAIN_PATCH=${TOOLCHAIN_PATCH}"
+      "-DTOOLCHAIN_SOURCE_NAME=${name}"
+      "-DTOOLCHAIN_SOURCE_DIRECTORY=${TOOLCHAIN_${name}_SOURCE}"
+      "-DTOOLCHAIN_SOURCE_URL=${TOOLCHAIN_${name}_URL}"
+      "-DTOOLCHAIN_SOURCE_SHA256=${TOOLCHAIN_${name}_SHA256}"
+      "-DTOOLCHAIN_SOURCE_REVISION=${TOOLCHAIN_${name}_REVISION}"
+      "-DTOOLCHAIN_DOWNLOAD_DIRECTORY=${TOOLCHAIN_CACHE_ROOT}/downloads"
+    COMMAND "${CMAKE_COMMAND}" --build "${preparation}" --target prepare-source
+    VERBATIM)
 endfunction()
