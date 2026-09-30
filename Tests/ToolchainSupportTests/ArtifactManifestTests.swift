@@ -16,7 +16,7 @@ struct ArtifactManifestTests {
         let artifact = CompilerArtifact(
             name: "SwiftCompilerBridge", archive: archive,
             checksum: String(repeating: "a", count: 64), archiveBytes: 20,
-            binaryChecksum: String(repeating: "b", count: 64), binaryBytes: 30,
+            binaryChecksum: String(repeating: "b", count: 64), binaryBytes: 30, slices: nil,
         )
         #expect(throws: ToolchainError.self) { try artifact.validate() }
     }
@@ -142,6 +142,68 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Both arm64 environments retain independent executable identities in the release contract.
+    ///
+    /// - Throws: Fixture conversion or validation fails.
+    @Test func acceptsDeviceAndSimulatorSlices() throws {
+        let manifest = try Self.platformFixture()
+        try manifest.validate()
+        let restored = try JSONDecoder().decode(
+            ArtifactManifest.self, from: JSONEncoder().encode(manifest),
+        )
+        #expect(restored == manifest)
+    }
+
+    /// A missing or mislabeled native environment must fail before binary-target selection.
+    ///
+    /// - Parameter fault: The invalid platform metadata applied to the first framework.
+    /// - Throws: Fixture conversion fails.
+    @Test(arguments: ["missing", "duplicate", "host", "checksum", "legacy"])
+    func rejectsInvalidPlatformSlices(_ fault: String) throws {
+        let manifest = try Self.platformFixture { object in
+            var artifacts = try #require(object["artifacts"] as? [[String: Any]])
+            var slices = try #require(artifacts[0]["slices"] as? [[String: Any]])
+            switch fault {
+            case "missing": slices.removeLast()
+            case "duplicate": slices[1] = slices[0]
+            case "host": slices[1]["compilerHost"] = "arm64-apple-ios18.0"
+            case "checksum": slices[1]["binaryChecksum"] = "invalid"
+            default: artifacts[0]["binaryBytes"] = 100
+            }
+            artifacts[0]["slices"] = slices
+            object["artifacts"] = artifacts
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Builds schema 2 data through the same JSON boundary used by release consumers.
+    ///
+    /// - Parameter edit: An optional mutation applied after converting every framework.
+    /// - Returns: The decoded manifest, which may intentionally contain invalid metadata.
+    /// - Throws: Fixture conversion or the requested mutation fails.
+    private static func platformFixture(
+        _ edit: (inout [String: Any]) throws -> Void = { _ in },
+    ) throws -> ArtifactManifest {
+        try modified { object in
+            object["schemaVersion"] = 2
+            var artifacts = try #require(object["artifacts"] as? [[String: Any]])
+            for index in artifacts.indices {
+                artifacts[index].removeValue(forKey: "binaryChecksum")
+                artifacts[index].removeValue(forKey: "binaryBytes")
+                artifacts[index]["slices"] = ["", "-simulator"].map { suffix in
+                    [
+                        "identifier": "ios-arm64" + suffix,
+                        "compilerHost": "arm64-apple-ios18.0" + suffix,
+                        "binaryChecksum": String(repeating: "e", count: 64),
+                        "binaryBytes": 200,
+                    ] as [String: Any]
+                }
+            }
+            object["artifacts"] = artifacts
+            try edit(&object)
+        }
+    }
+
     /// Fixture mutation preserves the decoder boundary used by release manifest consumers.
     private static func modified(_ edit: (inout [String: Any]) throws -> Void) throws
         -> ArtifactManifest {
@@ -197,7 +259,7 @@ struct ArtifactManifestTests {
                     checksum: String(repeating: "d", count: 64),
                     archiveBytes: 100,
                     binaryChecksum: String(repeating: "e", count: 64),
-                    binaryBytes: 200,
+                    binaryBytes: 200, slices: nil,
                 )
             },
         )

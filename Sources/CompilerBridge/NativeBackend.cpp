@@ -1,10 +1,13 @@
 #include "CompilerBackend.h"
 #include "lld/Common/Driver.h"
 #include "swift/AST/DiagnosticEngine.h"
+#include "swift/Basic/InitializeSwiftModules.h"
+#include "swift/Basic/LLVMInitialize.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/FrontendTool/FrontendTool.h"
 #include "llvm/Support/raw_ostream.h"
+#include <mutex>
 #include <utility>
 
 LLD_HAS_DRIVER(wasm)
@@ -17,6 +20,9 @@ namespace {
 
 /// LLVM locates the containing image without requiring an executable on the filesystem.
 char imageAnchor;
+
+/// A process-wide registration gate for Swift AST classes and optimizer passes.
+std::once_flag swiftModuleInitialization;
 
 /// The frontend observer keeps the diagnostic consumer alive throughout compilation.
 class DiagnosticCapture : public swift::FrontendObserver {
@@ -37,6 +43,8 @@ public:
 
 swift_toolchain::BackendResult swift_toolchain::runFrontend(int32_t count,
                                                             const char *const *arguments) {
+  INITIALIZE_LLVM();
+  std::call_once(swiftModuleInitialization, initializeSwiftModules);
   std::string message;
   llvm::raw_string_ostream stream(message);
   DiagnosticCapture capture(stream);

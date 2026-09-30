@@ -46,6 +46,11 @@ if(BUILD_TESTING)
   set_tests_properties(BundledPluginPolicy PROPERTIES TIMEOUT 20)
   set(native_profile_library_arguments)
   if(APPLE)
+    add_test(NAME NativePlatforms
+      COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+        "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/native-platform-tests"
+        -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/NativePlatforms.cmake")
+    set_tests_properties(NativePlatforms PROPERTIES TIMEOUT 20)
     add_executable(AppleFileSystemMetadataTests
       Sources/AppleFileSystemMetadata/AppleFileSystemMetadata.cpp
       Tests/AppleFileSystemMetadataTests/ContractTests.cpp)
@@ -118,6 +123,14 @@ if(BUILD_TESTING)
       "-DTOOLCHAIN_TEST_GENERATOR=${CMAKE_GENERATOR}"
       "-DTOOLCHAIN_TEST_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ConfigurationInputs.cmake")
+  add_test(NAME CompilerSourceCache
+    COMMAND "${CMAKE_COMMAND}"
+      "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/source-cache-tests"
+      "-DTOOLCHAIN_TEST_GENERATOR=${CMAKE_GENERATOR}"
+      "-DTOOLCHAIN_TEST_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/SourceCache.cmake")
+  set_tests_properties(CompilerSourceCache PROPERTIES TIMEOUT 20)
   add_test(NAME CompilerBridgeConfiguration
     COMMAND "${CMAKE_COMMAND}"
       -S "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/BridgeFixture"

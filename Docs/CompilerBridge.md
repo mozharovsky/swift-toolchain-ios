@@ -5,6 +5,10 @@ checks `swift_compiler_abi_version()` before calling the frontend, object reader
 linker. The real backend uses Swift's `performFrontend`, `autolink_extract_main`, and `lldMain`.
 It does not implement a replacement Swift parser or interpreter.
 
+The bridge links Swift's compiler implementation modules and initializes them once before entering
+the frontend. This registers the AST and SIL classes, analyses, and optimization passes that the
+upstream driver normally initializes. Frontend entry alone does not perform that registration.
+
 ## Ownership and execution
 
 Argument arrays and their strings are borrowed until the synchronous operation returns. The caller

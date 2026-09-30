@@ -2,7 +2,9 @@
 
 The producer uses CMake and Ninja. Source identities and archive SHA-256 values come from
 `Toolchain.lock.json`. The generated program target is wasm32 WASI Preview 1. The compiler itself
-runs on an arm64 iOS device with the deployment version recorded in the lock file.
+runs on an arm64 iOS device or Apple silicon simulator with the deployment version recorded in the
+lock file. The source lock keeps the device triple as the base identity. Simulator builds append
+`-simulator` and select the iPhone Simulator SDK.
 
 ## Bounded repository checks
 
@@ -37,6 +39,13 @@ mise exec -- cmake -S . -B .cache/compiler-plan -G Ninja \
   -DTOOLCHAIN_BOOTSTRAP_ROOT="$TOOLCHAIN_BOOTSTRAP_ROOT" \
   -DTOOLCHAIN_BUILD_JOBS=4
 ```
+
+Set `TOOLCHAIN_PLATFORM=simulator` and use a separate CMake plan directory to build the simulator
+variant. The default is `device`. Both plans can share `TOOLCHAIN_CACHE_ROOT` for pinned source
+archives. Native objects and receipts live in separate `device` and `simulator` build directories. The
+native receipt identity includes the selected platform. Each plan owns its source preparation
+metadata so switching plans does not repeat source patching. Never run both plans against shared source
+preparation concurrently.
 
 Configuration validates the bootstrap release and creates the graph. It does not download sources
 or start compiler builds. The default build also leaves those explicit targets untouched.

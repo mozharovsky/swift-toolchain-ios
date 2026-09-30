@@ -13,7 +13,7 @@ if(NOT bootstrap_matches)
   message(FATAL_ERROR "The macro bootstrap compiler must match Swift ${TOOLCHAIN_SWIFT_VERSION}.")
 endif()
 file(MAKE_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}" "${TOOLCHAIN_MACRO_OUTPUT}/Source")
-execute_process(COMMAND xcrun --sdk iphoneos --show-sdk-path
+execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" --show-sdk-path
   OUTPUT_VARIABLE sdk OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 set(syntax_modules "")
 foreach(input IN LISTS native_files)
@@ -58,7 +58,7 @@ configure_file(
 execute_process(COMMAND patch -p1 --forward --fuzz=0 --input
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch"
   WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source" COMMAND_ERROR_IS_FATAL ANY)
-execute_process(COMMAND xcrun --sdk iphoneos clang++ -std=c++17 -O2 -fvisibility=hidden
+execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" clang++ -std=c++17 -O2 -fvisibility=hidden
   -target "${TOOLCHAIN_COMPILER_HOST}" -isysroot "${sdk}"
   "-ffile-prefix-map=${TOOLCHAIN_REPOSITORY_ROOT}=/toolchain/producer"
   -c "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp"

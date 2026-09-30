@@ -7,6 +7,8 @@ if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" OR NOT CMAKE_HOST_SYSTEM_PROCESS
 endif()
 set(TOOLCHAIN_CACHE_ROOT "${CMAKE_BINARY_DIR}/native" CACHE PATH "Ignored source and build storage.")
 set(TOOLCHAIN_BOOTSTRAP_ROOT "" CACHE PATH "The Swift release toolchain's usr directory.")
+set(TOOLCHAIN_PLATFORM "device" CACHE STRING "The native compiler runs on a device or simulator.")
+set_property(CACHE TOOLCHAIN_PLATFORM PROPERTY STRINGS device simulator)
 set(TOOLCHAIN_BUILD_JOBS 4 CACHE STRING "Maximum jobs within the active native build stage.")
 if(NOT TOOLCHAIN_BUILD_JOBS MATCHES "^[1-9][0-9]*$")
   message(FATAL_ERROR "TOOLCHAIN_BUILD_JOBS must be a positive integer.")
@@ -24,6 +26,7 @@ file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_digest)
 string(SHA256 input_digest
   "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}")
 set(TOOLCHAIN_BUILD_ROOT "${TOOLCHAIN_CACHE_ROOT}/build/${input_digest}")
+string(APPEND TOOLCHAIN_BUILD_ROOT "/${TOOLCHAIN_PLATFORM}")
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   "${TOOLCHAIN_LOCK_FILE}" "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
   "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
@@ -37,43 +40,17 @@ if(NOT bootstrap_matches)
   message(FATAL_ERROR "The bootstrap compiler must match Swift ${TOOLCHAIN_SWIFT_VERSION}.")
 endif()
 
+include("${CMAKE_CURRENT_LIST_DIR}/SourceCache.cmake")
 set(source_targets "")
 foreach(name IN LISTS TOOLCHAIN_SOURCE_NAMES)
-  set(patch_command "")
-  if(name STREQUAL "swift")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/DisableImmediateExecution.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.patch")
-  elseif(name STREQUAL "llvm-project")
-    set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
-      COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-      "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
-  endif()
-  ExternalProject_Add(source-${name}
-    PREFIX "${TOOLCHAIN_CACHE_ROOT}/projects/${TOOLCHAIN_${name}_IDENTITY}"
-    SOURCE_DIR "${TOOLCHAIN_${name}_SOURCE}"
-    DOWNLOAD_DIR "${TOOLCHAIN_CACHE_ROOT}/downloads"
-    DOWNLOAD_NAME "${name}-${TOOLCHAIN_${name}_REVISION}.tar.gz"
-    URL "${TOOLCHAIN_${name}_URL}"
-    URL_HASH "SHA256=${TOOLCHAIN_${name}_SHA256}"
-    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
-    TLS_VERIFY TRUE
-    TIMEOUT 300
-    INACTIVITY_TIMEOUT 30
-    UPDATE_COMMAND ""
-    PATCH_COMMAND ${patch_command}
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-    EXCLUDE_FROM_ALL TRUE)
+  toolchain_add_source("${name}")
   list(APPEND source_targets source-${name})
 endforeach()
 add_custom_target(toolchain-sources DEPENDS ${source_targets})
 
 function(toolchain_native_stage name source profile)
   set(stage_arguments
+    "-DTOOLCHAIN_PLATFORM:STRING=${TOOLCHAIN_PLATFORM}"
     "-DTOOLCHAIN_BUILD_ROOT:PATH=${TOOLCHAIN_BUILD_ROOT}"
     "-DTOOLCHAIN_SOURCE_ROOT:PATH=${TOOLCHAIN_SOURCE_ROOT}"
     "-DTOOLCHAIN_NINJA:FILEPATH=${TOOLCHAIN_NINJA}")
@@ -99,7 +76,8 @@ function(toolchain_native_stage name source profile)
   set(configuration_inputs
     "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/${profile}.cmake"
     "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Profiles/Common.cmake"
-    "${TOOLCHAIN_LOCK_FILE}")
+    "${TOOLCHAIN_LOCK_FILE}"
+    "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/Inputs.cmake")
   if(name STREQUAL "llvm-ios")
     list(APPEND configuration_inputs
       "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/IncludeAppleFileSystemMetadata.cmake")

@@ -8,7 +8,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let version: String
     /// The C result layout must match the embedding package's compiled header.
     package let bridgeABI: Int
-    /// Native libraries execute on this device platform rather than the WASM target.
+    /// The base device triple determines the deployment floor of both native environments.
     package let compilerHost: String
     /// Generated modules retain the target recorded in the source configuration.
     package let programTarget: String
@@ -68,8 +68,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
-        guard schemaVersion == 1, bridgeABI == 1 else {
-            throw .invalidArtifact("Use artifact schema 1 and compiler bridge ABI 1.")
+        guard [1, 2].contains(schemaVersion), bridgeABI == 1 else {
+            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1.")
         }
         guard version.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil
         else {
@@ -128,6 +128,20 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         }
         for artifact in artifacts {
             try artifact.validate()
+            if schemaVersion == 2 {
+                guard let slices = artifact.slices,
+                      Set(slices.map(\.identifier)) == ["ios-arm64", "ios-arm64-simulator"],
+                      slices.allSatisfy({ slice in
+                          slice.compilerHost == compilerHost
+                              + (slice.identifier == "ios-arm64-simulator" ? "-simulator" : "")
+                      }) else {
+                    throw .invalidArtifact(
+                        "Every framework must contain matching device and simulator slices.",
+                    )
+                }
+            } else if artifact.slices != nil {
+                throw .invalidArtifact("Platform slices require artifact schema 2.")
+            }
         }
     }
 }
