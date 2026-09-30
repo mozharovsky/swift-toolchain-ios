@@ -3,7 +3,7 @@ include("${CMAKE_CURRENT_LIST_DIR}/CompilerSupportModules.cmake")
 
 # Input hashes describe the producer code whose outputs a later packaging run can consume.
 function(toolchain_native_identity output)
-  set(paths Toolchain.lock.json Patches/DisableImmediateExecution.patch
+  set(paths CMake/Inputs.cmake Toolchain.lock.json Patches/DisableImmediateExecution.patch
     Patches/AppleFileSystemMetadata.patch CMake/IncludeAppleFileSystemMetadata.cmake
     Patches/RestrictedSwiftNativeProfile.patch Patches/RestrictedLLVMNativeProfile.patch
     CMake/Profiles/RestrictedNative.cmake
@@ -16,7 +16,7 @@ function(toolchain_native_identity output)
     CMake/IncludeBridge.cmake CMake/CompilerSupportModules.cmake Sources/CompilerBridge/CMakeLists.txt
     Sources/CompilerBridge/SwiftCompilerBridge.cpp Sources/CompilerBridge/SwiftCompilerBridge.h
     Sources/CompilerBridge/NativeBackend.cpp Sources/CompilerBridge/CompilerBackend.h)
-  set(identity "")
+  set(identity "platform ${TOOLCHAIN_PLATFORM}\n")
   foreach(path IN LISTS paths)
     file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/${path}" checksum)
     string(APPEND identity "${path} ${checksum}\n")

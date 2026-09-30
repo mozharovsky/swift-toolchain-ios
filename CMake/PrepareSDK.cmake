@@ -22,7 +22,7 @@ string(JSON resources_path GET "${sdk_metadata}" targetTriples "${TOOLCHAIN_PROG
 if(NOT sdk_path STREQUAL "WASI.sdk" OR NOT resources_path STREQUAL "swift.xctoolchain/usr/lib/swift_static")
   message(FATAL_ERROR "The SDK payload layout needs a reviewed packaging update.")
 endif()
-set(framework "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/SwiftCompilerSDK.framework")
+set(framework "${TOOLCHAIN_FRAMEWORK_ROOT}/SwiftCompilerSDK.framework")
 set(payload "${framework}/Payload")
 file(MAKE_DIRECTORY "${framework}/Headers" "${payload}/swift.xctoolchain/usr/lib")
 file(COPY "${sdk_source}/WASI.sdk" DESTINATION "${payload}" PATTERN ".DS_Store" EXCLUDE)
@@ -72,9 +72,9 @@ configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.h.in"
   "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h" @ONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.m.in"
   "${TOOLCHAIN_PACKAGE_WORK}/SDKBundle.m" @ONLY)
-execute_process(COMMAND xcrun --sdk iphoneos --show-sdk-path
+execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" --show-sdk-path
   OUTPUT_VARIABLE sdk OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
-execute_process(COMMAND xcrun --sdk iphoneos clang -target "${TOOLCHAIN_COMPILER_HOST}"
+execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" clang -target "${TOOLCHAIN_COMPILER_HOST}"
   -isysroot "${sdk}" -fobjc-arc -dynamiclib -framework Foundation
   "-I${TOOLCHAIN_PACKAGE_WORK}" "${TOOLCHAIN_PACKAGE_WORK}/SDKBundle.m"
   -install_name "@rpath/SwiftCompilerSDK.framework/SwiftCompilerSDK"

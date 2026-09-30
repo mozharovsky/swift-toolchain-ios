@@ -8,7 +8,7 @@ set(CMAKE_MAKE_PROGRAM "${TOOLCHAIN_NINJA}" CACHE FILEPATH "The local Ninja exec
 set(CMAKE_BUILD_TYPE Release CACHE STRING "The libraries use optimization without debug information." FORCE)
 set(LLVM_PARALLEL_LINK_JOBS 1 CACHE STRING "Archive and executable links share one build slot." FORCE)
 set(CMAKE_SYSTEM_NAME iOS CACHE STRING "LLVM support libraries execute inside the iOS host." FORCE)
-set(CMAKE_OSX_SYSROOT iphoneos CACHE STRING "LLVM support libraries use the device SDK." FORCE)
+set(CMAKE_OSX_SYSROOT ${TOOLCHAIN_APPLE_SDK} CACHE STRING "LLVM support libraries use the selected iOS SDK." FORCE)
 set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "The compiler host uses arm64." FORCE)
 set(CMAKE_OSX_DEPLOYMENT_TARGET ${TOOLCHAIN_DEPLOYMENT_TARGET} CACHE STRING "Native compiler libraries use the supported deployment floor." FORCE)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE EXECUTABLE CACHE STRING "Link probes validate iOS SDK libraries without running their outputs." FORCE)

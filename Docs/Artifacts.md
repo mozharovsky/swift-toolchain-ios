@@ -18,9 +18,11 @@ in-process server use the flat framework layout described in [Compiler bridge](C
 
 ## Preparation
 
-Start with a completed native compiler cache and the matching Swift release toolchain. Set
+Start with completed device and simulator builds in one native compiler cache and the matching
+Swift release toolchain. Set
 `TOOLCHAIN_NATIVE_CACHE`, `TOOLCHAIN_BOOTSTRAP_ROOT`, `TOOLCHAIN_MACRO_OUTPUT`,
-`TOOLCHAIN_SDK_ARCHIVE`, and `TOOLCHAIN_ARTIFACT_OUTPUT` to local paths. The artifact output must be
+`TOOLCHAIN_SIMULATOR_MACRO_OUTPUT`, `TOOLCHAIN_SDK_ARCHIVE`, and `TOOLCHAIN_ARTIFACT_OUTPUT` to local
+paths. The artifact output must be
 a new ignored directory. An existing output is rejected so previously pinned archives remain intact.
 
 ```sh
@@ -30,9 +32,16 @@ mise exec -- cmake \
   -DTOOLCHAIN_MACRO_OUTPUT="$TOOLCHAIN_MACRO_OUTPUT" \
   -P CMake/BuildMacros.cmake
 mise exec -- cmake \
+  -DTOOLCHAIN_PLATFORM=simulator \
+  -DTOOLCHAIN_NATIVE_CACHE="$TOOLCHAIN_NATIVE_CACHE" \
+  -DTOOLCHAIN_BOOTSTRAP_ROOT="$TOOLCHAIN_BOOTSTRAP_ROOT" \
+  -DTOOLCHAIN_MACRO_OUTPUT="$TOOLCHAIN_SIMULATOR_MACRO_OUTPUT" \
+  -P CMake/BuildMacros.cmake
+mise exec -- cmake \
   -DTOOLCHAIN_NATIVE_CACHE="$TOOLCHAIN_NATIVE_CACHE" \
   -DTOOLCHAIN_BOOTSTRAP_ROOT="$TOOLCHAIN_BOOTSTRAP_ROOT" \
   -DTOOLCHAIN_MACRO_OUTPUT="$TOOLCHAIN_MACRO_OUTPUT" \
+  -DTOOLCHAIN_SIMULATOR_MACRO_OUTPUT="$TOOLCHAIN_SIMULATOR_MACRO_OUTPUT" \
   -DTOOLCHAIN_SDK_ARCHIVE="$TOOLCHAIN_SDK_ARCHIVE" \
   -DTOOLCHAIN_ARTIFACT_OUTPUT="$TOOLCHAIN_ARTIFACT_OUTPUT" \
   -DTOOLCHAIN_ARTIFACT_VERSION=0.1.0 \
@@ -52,15 +61,15 @@ The SDK archive must match the exact SHA-256 in `Toolchain.lock.json`. Packaging
 installed Apple SDK as guest input. Xcode supplies the SDK only when compiling native libraries
 and the small resource anchor.
 
-The first artifact schema requires the complete current component set, including macro build
-support. Earlier local candidates created while this producer was under development must be
-regenerated. They were not published release manifests. The toolchain input lock and notice index
-have independent schemas and are not decoded as artifact manifests.
+Artifact schema 2 requires device and simulator slices for every framework. Each slice records its
+XCFramework identifier, native compiler triple, executable checksum, and executable size. Schema 1
+metadata remains readable for existing device-only releases. The toolchain input lock and notice
+index have independent schemas.
 
 ## Layout and validation
 
-`Frameworks` contains device frameworks with rewritten install names. `XCFrameworks` contains their
-arm64 iOS slices. `Archives` contains ZIP files for SwiftPM binary targets. `ArtifactManifest.json`
+`Frameworks` separates device and simulator frameworks under their XCFramework slice identifiers.
+`XCFrameworks` combines both arm64 environments with rewritten install names. `Archives` contains ZIP files for SwiftPM binary targets. `ArtifactManifest.json`
 records configuration, patch, SDK, archive, and executable identities. The generated `Package.swift`
 exposes one local `SwiftCompilerArtifacts` product for integration checks.
 
@@ -74,8 +83,9 @@ The native profile records `restrictedSwiftPatchSHA256` and `restrictedLLVMPatch
 present and checks each digest's syntax. Earlier manifests can omit the group. Native receipts
 also bind the profile source and configuration so packaging cannot reuse a broader compiler build.
 
-`Development/MacroBuildSupport` contains native SwiftSyntax module metadata, matching support
-libraries, and open C-shim headers for building additional bundled macro implementations. Its ZIP
+`Development/MacroBuildSupport` separates native SwiftSyntax modules and matching support libraries
+under `ios-arm64` and `ios-arm64-simulator`. Each directory includes compatibility metadata and open
+C-shim headers for building additional bundled macro implementations. Its ZIP
 has a separate manifest record and is not part of the app's SwiftPM product. This lets a consumer
 update its own native macro library without rebuilding the compiler or shipping build-only inputs
 in the application.
