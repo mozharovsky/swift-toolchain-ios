@@ -1,18 +1,17 @@
 #include "CompilerBackend.h"
+#include "SemanticSupport.h"
 #include "SwiftCompilerBridge.h"
 #include "swift/AST/DiagnosticConsumer.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/PluginRegistry.h"
 #include "swift/Basic/SourceManager.h"
 #include "swift/Frontend/Frontend.h"
-#include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/CodeCompletionCache.h"
 #include "swift/IDE/CodeCompletionContext.h"
 #include "swift/IDE/CodeCompletionResult.h"
 #include "swift/IDE/CodeCompletionResultPrinter.h"
 #include "swift/IDE/FuzzyStringMatcher.h"
 #include "swift/IDETool/IDEInspectionInstance.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -24,7 +23,6 @@
 #include <string>
 #include <vector>
 
-using swift::ide::CodeCompletionDeclKind;
 using swift::ide::CodeCompletionFlairBit;
 using swift::ide::CodeCompletionResult;
 using swift::ide::CodeCompletionResultKind;
@@ -33,16 +31,6 @@ using swift::ide::CompletionKind;
 using swift::ide::SemanticContextKind;
 
 namespace {
-
-/// LLVM resolves the containing image from this address when it needs an executable path.
-char completionAnchor;
-
-/// Macro libraries stay loaded across cache resets because the loader keeps them mapped.
-std::shared_ptr<swift::PluginRegistry> &pluginRegistry() {
-  static auto *registry =
-      new std::shared_ptr<swift::PluginRegistry>(std::make_shared<swift::PluginRegistry>());
-  return *registry;
-}
 
 /// The module result cache and the inspection instance, which SourceKit keeps once per service.
 struct CompletionState {
@@ -64,7 +52,7 @@ struct CompletionState {
   /// The context-free results of each imported module, which later requests reuse.
   std::optional<swift::ide::CodeCompletionCache> cache;
   /// The cached compiler instance used for fast completion inside function bodies.
-  swift::ide::IDEInspectionInstance instance{pluginRegistry()};
+  swift::ide::IDEInspectionInstance instance{swift_toolchain::semanticPluginRegistry()};
 };
 
 /// The completion context, which the bridge's operation lock guards.
@@ -88,94 +76,17 @@ public:
   }
 };
 
-/// Milliseconds since the given start, measured on the monotonic clock.
-double millisecondsSince(std::chrono::steady_clock::time_point start) {
-  return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start)
-      .count();
-}
-
-/// A completion document for a request that the compiler rejected before completion ran.
-///
-/// \param error The reason, which the JSON writer escapes.
-std::string failureDocument(const std::string &error) {
-  std::string text;
-  llvm::raw_string_ostream stream(text);
-  llvm::json::OStream json(stream);
-  json.object([&] {
-    json.attribute("schema", 1);
-    json.attribute("status", "failure");
-    json.attribute("error", error);
-  });
-  stream.flush();
-  return text;
-}
-
 /// Identifier bytes include UTF-8 sequences because Swift accepts Unicode identifiers.
 bool isIdentifierByte(unsigned char byte) {
   return byte == '_' || byte >= 0x80 || (byte >= '0' && byte <= '9') ||
          (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z');
 }
 
-/// Stable names for the declaration kinds that an editor maps to icons.
-const char *declKindName(CodeCompletionDeclKind kind) {
-  switch (kind) {
-  case CodeCompletionDeclKind::Module:
-    return "module";
-  case CodeCompletionDeclKind::Class:
-    return "class";
-  case CodeCompletionDeclKind::Actor:
-    return "actor";
-  case CodeCompletionDeclKind::Struct:
-    return "struct";
-  case CodeCompletionDeclKind::Enum:
-    return "enum";
-  case CodeCompletionDeclKind::EnumElement:
-    return "enumElement";
-  case CodeCompletionDeclKind::Protocol:
-    return "protocol";
-  case CodeCompletionDeclKind::AssociatedType:
-    return "associatedType";
-  case CodeCompletionDeclKind::TypeAlias:
-    return "typeAlias";
-  case CodeCompletionDeclKind::GenericTypeParam:
-    return "genericTypeParam";
-  case CodeCompletionDeclKind::Constructor:
-    return "initializer";
-  case CodeCompletionDeclKind::Destructor:
-    return "deinitializer";
-  case CodeCompletionDeclKind::Subscript:
-    return "subscript";
-  case CodeCompletionDeclKind::StaticMethod:
-    return "staticMethod";
-  case CodeCompletionDeclKind::InstanceMethod:
-    return "instanceMethod";
-  case CodeCompletionDeclKind::PrefixOperatorFunction:
-  case CodeCompletionDeclKind::PostfixOperatorFunction:
-  case CodeCompletionDeclKind::InfixOperatorFunction:
-    return "operator";
-  case CodeCompletionDeclKind::FreeFunction:
-    return "function";
-  case CodeCompletionDeclKind::StaticVar:
-    return "staticProperty";
-  case CodeCompletionDeclKind::InstanceVar:
-    return "instanceProperty";
-  case CodeCompletionDeclKind::LocalVar:
-    return "localVariable";
-  case CodeCompletionDeclKind::GlobalVar:
-    return "globalVariable";
-  case CodeCompletionDeclKind::PrecedenceGroup:
-    return "precedenceGroup";
-  case CodeCompletionDeclKind::Macro:
-    return "macro";
-  }
-  return "declaration";
-}
-
 /// The result kind, refined by its declaration kind for declarations.
 std::string resultKindName(const CodeCompletionResult &result) {
   switch (result.getKind()) {
   case CodeCompletionResultKind::Declaration:
-    return declKindName(result.getAssociatedDeclKind());
+    return swift_toolchain::declarationKindName(result.getAssociatedDeclKind());
   case CodeCompletionResultKind::Keyword:
     return "keyword";
   case CodeCompletionResultKind::Pattern:
@@ -492,47 +403,16 @@ swift_toolchain::runCompletion(const swift_toolchain::CompletionRequest &request
     completionState = new CompletionState(cacheDirectory);
   }
 
-  swift::SourceManager sourceManager;
-  swift::DiagnosticEngine diagnostics(sourceManager);
-  std::string setupText;
-  llvm::raw_string_ostream setupStream(setupText);
-  swift::PrintingDiagnosticConsumer setupPrinter(setupStream);
-  diagnostics.addConsumer(setupPrinter);
-
   swift::CompilerInvocation invocation;
-  const std::string executable =
-      llvm::sys::fs::getMainExecutable("swift-compiler", &completionAnchor);
-  if (invocation.parseArgs({request.arguments, static_cast<size_t>(request.count)}, diagnostics,
-                           nullptr, {}, executable)) {
-    setupStream.flush();
-    return {1, true, failureDocument("The completion arguments are invalid. " + setupText)};
-  }
-
-  auto fileSystem = llvm::vfs::getRealFileSystem();
   llvm::SmallString<256> target;
-  if (fileSystem->getRealPath(request.path, target)) {
-    target = request.path;
+  std::unique_ptr<llvm::MemoryBuffer> unusedBuffer;
+  const std::string invalid =
+      prepareSemanticInvocation("completion", request.count, request.arguments, request.path,
+                                std::nullopt, invocation, target, unusedBuffer);
+  if (!invalid.empty()) {
+    return {1, true, statusDocument("failure", invalid)};
   }
-  auto &inputs = invocation.getFrontendOptions().InputsAndOutputs;
-  swift::FrontendInputsAndOutputs replacement;
-  bool foundTarget = false;
-  for (const swift::InputFile &input : inputs.getAllInputs()) {
-    llvm::SmallString<256> name;
-    if (fileSystem->getRealPath(input.getFileName(), name)) {
-      name = input.getFileName();
-    }
-    const bool primary = name == target;
-    foundTarget = foundTarget || primary;
-    replacement.addInput(swift::InputFile(name.str(), primary, input.getBuffer()));
-  }
-  if (!foundTarget) {
-    return {1, true, failureDocument("The completion path is not one of the frontend inputs.")};
-  }
-  replacement.setShouldRecoverMissingInputs();
-  inputs = replacement;
-  invocation.getFrontendOptions().RequestedAction = swift::FrontendOptions::ActionType::Typecheck;
-  invocation.getFrontendOptions().IndexStorePath.clear();
-  invocation.getFrontendOptions().LLVMArgs.clear();
+  auto fileSystem = llvm::vfs::getRealFileSystem();
   invocation.getLangOptions().AttachCommentsToDecls = true;
 
   size_t identifierStart = request.offset;

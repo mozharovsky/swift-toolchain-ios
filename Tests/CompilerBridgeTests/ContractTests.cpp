@@ -183,6 +183,72 @@ void checkCompletion() {
   swift_compiler_cancel_completion(0);
 }
 
+/// Builds an annotation request for the test backend.
+SwiftCompilerAnnotationRequest annotationRequest(uint64_t identifier, const char *const *arguments,
+                                                 const char *source) {
+  return {identifier, 1, arguments, "main.swift", source, std::strlen(source)};
+}
+
+/// Invalid annotation requests fail as reusable JSON documents before reaching the backend.
+void checkAnnotationValidation() {
+  const char *arguments[] = {"valid"};
+  const char *missingArgument[] = {nullptr};
+  const int before = test_backend::callCount();
+  auto missing = swift_compiler_annotate(nullptr);
+  auto zeroIdentifier = annotationRequest(0, arguments, "let a = 1");
+  auto noArguments = annotationRequest(30, missingArgument, "let a = 1");
+  auto noPath = annotationRequest(31, arguments, "let a = 1");
+  noPath.path = nullptr;
+  auto noSource = annotationRequest(32, arguments, "let a = 1");
+  noSource.source = nullptr;
+  for (const SwiftCompilerAnnotationRequest *request :
+       {&zeroIdentifier, &noArguments, &noPath, &noSource}) {
+    auto result = swift_compiler_annotate(request);
+    expect(result.exitCode == 1 && result.canRunAgain, "An invalid annotation lost its status.");
+    expect(documentContains(result, "\"status\":\"failure\""), "An invalid annotation lacks JSON.");
+    release(result);
+  }
+  expect(missing.exitCode == 1 && documentContains(missing, "\"schema\":1"),
+         "A missing annotation request must fail with a document.");
+  release(missing);
+  expect(test_backend::callCount() == before, "An invalid annotation reached the backend.");
+}
+
+/// Annotation forwards the source and honors the cancellation that it shares with completion.
+void checkAnnotation() {
+  const char *arguments[] = {"valid"};
+  auto request = annotationRequest(40, arguments, "let a = 1");
+  auto success = swift_compiler_annotate(&request);
+  expect(success.exitCode == 0 && documentContains(success, "\"sourceLength\":9"),
+         "An annotation lost its source or result.");
+  release(success);
+
+  const int before = test_backend::callCount();
+  swift_compiler_cancel_completion(41);
+  auto early = annotationRequest(41, arguments, "let a = 1");
+  auto earlyResult = swift_compiler_annotate(&early);
+  expect(earlyResult.exitCode == SWIFT_COMPILER_COMPLETION_CANCELLED && earlyResult.canRunAgain,
+         "An early cancellation did not stop its annotation.");
+  expect(documentContains(earlyResult, "\"status\":\"cancelled\""),
+         "A cancelled annotation lacks its status.");
+  expect(test_backend::callCount() == before, "An early cancellation reached the backend.");
+  release(earlyResult);
+
+  SwiftCompilerResult running{};
+  std::thread worker([&running, &arguments] {
+    auto waiting = annotationRequest(42, arguments, "wait-for-cancellation");
+    running = swift_compiler_annotate(&waiting);
+  });
+  while (!test_backend::completionWaiting()) {
+    std::this_thread::yield();
+  }
+  swift_compiler_cancel_completion(42);
+  worker.join();
+  expect(running.exitCode == SWIFT_COMPILER_COMPLETION_CANCELLED && running.canRunAgain,
+         "A running annotation ignored its cancellation.");
+  release(running);
+}
+
 /// No entry point may touch compiler state after LLD reports that it cannot run again.
 void checkStickyFailure() {
   const char *failure[] = {"nonreusable"};
@@ -196,12 +262,16 @@ void checkStickyFailure() {
   auto autolink = swift_compiler_autolink(1, valid);
   auto request = completionRequest(20, valid, "let a = 1");
   auto completion = swift_compiler_complete(&request);
+  auto annotationInput = annotationRequest(21, valid, "let a = 1");
+  auto annotation = swift_compiler_annotate(&annotationInput);
   expect(!frontend.canRunAgain && !linker.canRunAgain && !autolink.canRunAgain &&
-             !completion.canRunAgain,
+             !completion.canRunAgain && !annotation.canRunAgain,
          "A poisoned compiler session was reused.");
-  expect(documentContains(completion, "\"status\":\"failure\""),
-         "A poisoned completion lacks its document.");
+  expect(documentContains(completion, "\"status\":\"failure\"") &&
+             documentContains(annotation, "\"status\":\"failure\""),
+         "A poisoned completion or annotation lacks its document.");
   release(completion);
+  release(annotation);
   expect(test_backend::callCount() == before, "A poisoned session reached the native backend.");
   release(frontend);
   release(linker);
@@ -218,6 +288,8 @@ int main() {
   checkSerialization();
   checkCompletionValidation();
   checkCompletion();
+  checkAnnotationValidation();
+  checkAnnotation();
   checkStickyFailure();
   return failures.load() == 0 ? 0 : 1;
 }

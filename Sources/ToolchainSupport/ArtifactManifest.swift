@@ -8,7 +8,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let version: String
     /// The C result layout must match the embedding package's compiled header.
     ///
-    /// Version 2 adds semantic completion and keeps the version 1 operations unchanged.
+    /// Version 2 adds semantic completion and version 3 adds semantic annotation. Both keep the
+    /// earlier operations unchanged.
     package let bridgeABI: Int
     /// The base device triple determines the deployment floor of both native environments.
     package let compilerHost: String
@@ -76,8 +77,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
-        guard [1, 2].contains(schemaVersion), [1, 2].contains(bridgeABI) else {
-            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1 or 2.")
+        guard [1, 2].contains(schemaVersion), (1 ... 3).contains(bridgeABI) else {
+            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1 to 3.")
         }
         guard version.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil
         else {

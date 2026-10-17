@@ -81,7 +81,8 @@ foreach(index RANGE ${last})
       if(NOT actual_privacy STREQUAL expected_privacy)
         message(FATAL_ERROR "The compiler privacy declaration changed during packaging.")
       endif()
-      # ABI 2 consumers call the completion entry points, so the bridge must export them.
+      # ABI 2 consumers call the completion entry points and ABI 3 consumers also call
+      # annotation, so the bridge must export them.
       execute_process(COMMAND xcrun nm -g -U -j "${binary}" OUTPUT_VARIABLE bridge_exports
         COMMAND_ERROR_IS_FATAL ANY)
       string(REPLACE "\n" ";" bridge_exports "${bridge_exports}")
@@ -90,6 +91,9 @@ foreach(index RANGE ${last})
       if(abi GREATER_EQUAL 2)
         list(APPEND required_exports _swift_compiler_complete _swift_compiler_cancel_completion
           _swift_compiler_reset_completion)
+      endif()
+      if(abi GREATER_EQUAL 3)
+        list(APPEND required_exports _swift_compiler_annotate)
       endif()
       foreach(symbol IN LISTS required_exports)
         if(NOT symbol IN_LIST bridge_exports)

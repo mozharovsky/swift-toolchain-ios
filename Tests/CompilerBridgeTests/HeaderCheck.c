@@ -5,6 +5,8 @@ _Static_assert(sizeof(((SwiftCompilerResult *)0)->canRunAgain) == 4, "Reuse must
 
 _Static_assert(sizeof(((SwiftCompilerCompletionRequest *)0)->requestID) == 8,
                "Completion identifiers must remain 64-bit.");
+_Static_assert(sizeof(((SwiftCompilerAnnotationRequest *)0)->requestID) == 8,
+               "Annotation identifiers must remain 64-bit.");
 
 /// The C++ test calls through a C translation unit to verify header and linkage compatibility.
 uint32_t compiler_header_version(void) {
