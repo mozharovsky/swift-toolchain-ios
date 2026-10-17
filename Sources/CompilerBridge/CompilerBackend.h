@@ -55,12 +55,33 @@ struct CompletionRequest {
 BackendResult runCompletion(const CompletionRequest &request,
                             std::shared_ptr<std::atomic<bool>> cancellation);
 
+/// A validated annotation request whose buffers stay borrowed until runAnnotation returns.
+struct AnnotationRequest {
+  /// The number of frontend arguments, which the bridge has checked to be positive.
+  int32_t count;
+  /// The frontend argument strings, which remain owned by the caller.
+  const char *const *arguments;
+  /// The input path whose contents the source buffer replaces.
+  const char *path;
+  /// The UTF-8 source text, which need not end with a NUL byte.
+  const char *source;
+  /// The source length in bytes.
+  size_t sourceLength;
+};
+
+/// Type-checks the input at the request's path and returns its references as a JSON document.
+///
+/// The backend stops at the compiler's next cancellation check once the flag becomes true and
+/// returns the cancelled status. The exit code follows the public annotation contract.
+BackendResult runAnnotation(const AnnotationRequest &request,
+                            std::shared_ptr<std::atomic<bool>> cancellation);
+
 /// Drops the cached completion context while the bridge holds the operation lock.
 void resetCompletion();
 
 /// Registers LLVM targets and the Swift-implemented compiler modules once per process.
 ///
-/// The frontend and completion call it before their first use of compiler state.
+/// The frontend, completion, and annotation call it before their first use of compiler state.
 void prepareNativeCompiler();
 
 } // namespace swift_toolchain

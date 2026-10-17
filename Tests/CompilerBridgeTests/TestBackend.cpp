@@ -57,6 +57,23 @@ std::atomic<int> resets{0};
 /// Whether a completion is waiting for cancellation, which lets a test cancel at the right time.
 std::atomic<bool> waiting{false};
 
+/// Waits up to five seconds for a cancellation, which lets a test stop a running request.
+///
+/// \param cancellation The flag that the bridge passed to the backend.
+swift_toolchain::BackendResult waitForCancellation(const std::atomic<bool> &cancellation) {
+  ++calls;
+  waiting = true;
+  const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+  while (!cancellation.load() && std::chrono::steady_clock::now() < deadline) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  waiting = false;
+  if (cancellation.load()) {
+    return {2, true, "{\"schema\":1,\"status\":\"cancelled\"}"};
+  }
+  return {1, true, "{\"schema\":1,\"status\":\"failure\"}"};
+}
+
 } // namespace
 
 swift_toolchain::BackendResult
@@ -64,22 +81,27 @@ swift_toolchain::runCompletion(const swift_toolchain::CompletionRequest &request
                                std::shared_ptr<std::atomic<bool>> cancellation) {
   const std::string source(request.source, request.sourceLength);
   if (source == "wait-for-cancellation") {
-    ++calls;
-    waiting = true;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (!cancellation->load() && std::chrono::steady_clock::now() < deadline) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    waiting = false;
-    if (cancellation->load()) {
-      return {2, true, "{\"schema\":1,\"status\":\"cancelled\"}"};
-    }
-    return {1, true, "{\"schema\":1,\"status\":\"failure\"}"};
+    return waitForCancellation(*cancellation);
   }
   auto result = respond(request.arguments[0]);
   if (result.exitCode == 0) {
     result.message =
         "{\"schema\":1,\"status\":\"success\",\"offset\":" + std::to_string(request.offset) + "}";
+  }
+  return result;
+}
+
+swift_toolchain::BackendResult
+swift_toolchain::runAnnotation(const swift_toolchain::AnnotationRequest &request,
+                               std::shared_ptr<std::atomic<bool>> cancellation) {
+  const std::string source(request.source, request.sourceLength);
+  if (source == "wait-for-cancellation") {
+    return waitForCancellation(*cancellation);
+  }
+  auto result = respond(request.arguments[0]);
+  if (result.exitCode == 0) {
+    result.message = "{\"schema\":1,\"status\":\"success\",\"sourceLength\":" +
+                     std::to_string(request.sourceLength) + "}";
   }
   return result;
 }

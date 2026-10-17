@@ -12,7 +12,8 @@ int maximumConcurrency();
 /// The number of times the bridge dropped the completion context.
 int completionResets();
 
-/// Whether a completion is waiting for its cancellation flag inside the test backend.
+/// Whether a completion or an annotation is waiting for its cancellation flag inside the test
+/// backend.
 bool completionWaiting();
 
 } // namespace test_backend

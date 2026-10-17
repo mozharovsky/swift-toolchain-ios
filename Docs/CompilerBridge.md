@@ -1,13 +1,14 @@
 # Compiler bridge
 
-`Sources/CompilerBridge/SwiftCompilerBridge.h` declares C ABI version 2. An embedding application
+`Sources/CompilerBridge/SwiftCompilerBridge.h` declares C ABI version 3. An embedding application
 checks `swift_compiler_abi_version()` before calling the frontend, object reader, WebAssembly
-linker, or completion. The real backend uses Swift's `performFrontend`, `autolink_extract_main`,
-and `lldMain`, and Swift's IDE inspection instance for completion. It does not implement a
-replacement Swift parser or interpreter.
+linker, completion, or annotation. The real backend uses Swift's `performFrontend`,
+`autolink_extract_main`, and `lldMain`. Completion uses Swift's IDE inspection instance, and
+annotation type-checks with a compiler instance and Swift's source entity walker. It does not
+implement a replacement Swift parser or interpreter.
 
-Version 2 adds semantic completion. The version 1 operations and their result layout are
-unchanged.
+Version 2 adds semantic completion, and version 3 adds semantic annotation. The earlier operations
+and their result layout are unchanged.
 
 The bridge links Swift's compiler implementation modules and initializes them once before entering
 the frontend. This registers the AST and SIL classes, analyses, and optimization passes that the
@@ -122,12 +123,55 @@ Each item carries `name`, `description`, `kind`, `type`, `sourceText`, `typeRela
 context without popularity data. An unfiltered list leaves out results that are not recommended or
 have an invalid type, and a filtered list ranks them last.
 
+## Annotation
+
+`swift_compiler_annotate` lists the named references in a source file for an editor that colors
+them. Its request names the same trusted frontend arguments that a compile of the project uses,
+the input path that a borrowed source buffer replaces, and a request identifier. The other inputs
+are parsed as secondary files, and only the primary input's function bodies are type-checked.
+
+Every request builds a new compiler instance with the shared macro plugin registry and drops it
+before returning. The cost therefore follows the size of the input and does not depend on earlier
+requests. Annotation takes the operation lock and the macro rules of completion, and
+`swift_compiler_cancel_completion` stops it the same way. Completions and annotations share one
+identifier space. A cancelled type check leaves expressions unsolved, so the bridge returns the
+cancelled status instead of partial references.
+
+The backend follows SourceKit's semantic annotator. It reports references to declarations and
+leaves out implicit references, `self`, unavailable declarations, and the `nil` literal that a
+pattern turns into `Optional.none`. A reference to an initializer through its type's name reports
+the type. References inside macro expansions and references whose text does not start like an
+identifier, such as operators and subscript brackets, are left out. Declarations themselves are not
+references, so an editor colors declaration names from syntax.
+
+### Annotation document
+
+Every annotation result carries an owned JSON document with `"schema": 1` and a `status` of
+`success`, `failure`, or `cancelled`. The exit code is zero for success,
+`SWIFT_COMPILER_COMPLETION_CANCELLED` for cancellation, and one for failure. A failure carries an
+`error` string. Source errors still produce a successful document.
+
+A successful document also carries these fields.
+
+- `module` names the main module of the frontend arguments.
+- `references` lists the references in source order of the walk. Each carries `offset` and
+  `length` in UTF-8 bytes, the referenced declaration's `kind` with the completion item kind
+  names, its `module`, and `project`, which is true for declarations of the main module.
+- `diagnostics` lists at most 100 errors and warnings. Each carries `severity`, `message`, and
+  the UTF-8 `offset` of its location when the location falls in the primary input.
+- `timingsMs` reports the setup, type-check, and walk time.
+
+The module comparison decides `project`, because an embedding application can supply its SDK
+modules through ordinary import paths, where the compiler treats them as user modules.
+
 ## Contract tests
 
 The small CMake target links the real C ABI wrapper to an explicitly named test backend. It checks
 C header linkage, argument validation, owned messages with embedded NUL bytes, ordinary error
 recovery, shared serialization, and sticky invalidation. Its completion checks cover request
-validation, cancellation before and during a run, the reset, and the poisoned session.
+validation, cancellation before and during a run, the reset, and the poisoned session. Its
+annotation checks cover request validation, forwarding, cancellation shared with completion, and
+the poisoned session.
 `TOOLCHAIN_ENABLE_SANITIZERS` defaults to `OFF`. Setting it to `ON` instruments the bridge and bundled-plugin host tests with ASan and UBSan.
 `mise run native-check` enables this option. The test backend does not compile or interpret Swift.
 Its results are not compiler execution or physical-device evidence.
@@ -138,4 +182,5 @@ Separate upstream profile tests compile the patched process and memory implement
 matching host LLVM support archives. Those tests execute on the build machine and do not establish
 execution of the complete compiler on iPhone.
 
-The production Swift target links `NativeBackend.cpp`. The test backend is never part of that target.
+The production Swift target links `NativeBackend.cpp`, `CompletionBackend.cpp`,
+`AnnotationBackend.cpp`, and `SemanticSupport.cpp`. The test backend is never part of that target.

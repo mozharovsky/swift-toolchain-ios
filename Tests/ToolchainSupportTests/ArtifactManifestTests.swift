@@ -74,14 +74,14 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
-    /// Accepts both bridge ABI versions and rejects one that no consumer header defines.
+    /// Accepts every bridge ABI version and rejects one that no consumer header defines.
     ///
     /// - Parameter version: A bridge ABI version.
     /// - Throws: Fixture loading or JSON conversion fails, or a supported version fails validation.
-    @Test(arguments: [1, 2, 3, 0])
+    @Test(arguments: [1, 2, 3, 4, 0])
     func checksBridgeABI(version: Int) throws {
         let manifest = try Self.modified { object in object["bridgeABI"] = version }
-        if version == 1 || version == 2 {
+        if (1 ... 3).contains(version) {
             try manifest.validate()
         } else {
             #expect(throws: ToolchainError.self) { try manifest.validate() }

@@ -15,14 +15,15 @@ std::mutex operationMutex;
 /// A native failure can invalidate more than the operation that first observed it.
 bool sessionReusable = true;
 
-/// Cancellation has its own lock so another thread can stop a completion that holds the operation
-/// lock.
+/// Cancellation has its own lock so another thread can stop a completion or an annotation that
+/// holds the operation lock.
 std::mutex cancellationMutex;
 
-/// The identifier of the completion that holds the operation lock, or zero when none runs.
-uint64_t runningCompletion = 0;
+/// The identifier of the completion or annotation that holds the operation lock, or zero when none
+/// runs.
+uint64_t runningRequest = 0;
 
-/// The flag that the running completion's compiler instance checks.
+/// The flag that the running request's compiler instance checks.
 std::shared_ptr<std::atomic<bool>> runningCancellation;
 
 /// Identifiers cancelled before their request took the operation lock, oldest first.
@@ -31,11 +32,35 @@ std::deque<uint64_t> pendingCancellations;
 /// The number of early cancellations remembered, which bounds the cost of stale identifiers.
 constexpr size_t rememberedCancellations = 64;
 
-/// A completion document for an outcome that the backend never sees.
+/// A completion or annotation document for an outcome that the backend never sees.
 ///
 /// The error text is fixed ASCII without quotes, so it needs no JSON escaping.
-std::string completionDocument(const char *status, const char *error) {
+std::string requestDocument(const char *status, const char *error) {
   return std::string("{\"schema\":1,\"status\":\"") + status + "\",\"error\":\"" + error + "\"}";
+}
+
+/// Registers a cancellable request that holds the operation lock, unless it was cancelled earlier.
+///
+/// \param identifier The request's nonzero identifier.
+/// \returns The flag that the backend checks, or null when the identifier was cancelled before the
+/// request started, which consumes that cancellation.
+std::shared_ptr<std::atomic<bool>> beginCancellable(uint64_t identifier) {
+  std::lock_guard<std::mutex> guard(cancellationMutex);
+  auto pending = std::find(pendingCancellations.begin(), pendingCancellations.end(), identifier);
+  if (pending != pendingCancellations.end()) {
+    pendingCancellations.erase(pending);
+    return nullptr;
+  }
+  runningRequest = identifier;
+  runningCancellation = std::make_shared<std::atomic<bool>>(false);
+  return runningCancellation;
+}
+
+/// Clears the running request after its backend returns.
+void endCancellable() {
+  std::lock_guard<std::mutex> guard(cancellationMutex);
+  runningRequest = 0;
+  runningCancellation.reset();
 }
 
 /// The C ABI never lets a caller borrow a backend string or diagnostic stream.
@@ -49,6 +74,13 @@ SwiftCompilerResult copyResult(const swift_toolchain::BackendResult &result) {
   message[result.message.size()] = '\0';
   sessionReusable = sessionReusable && result.canRunAgain;
   return {result.exitCode, sessionReusable ? 1 : 0, message, result.message.size()};
+}
+
+/// The result of a completion or annotation after a native failure made the session unusable.
+SwiftCompilerResult sessionFailure() {
+  return copyResult(
+      {1, false,
+       requestDocument("failure", "The compiler session cannot be reused. Restart the process.")});
 }
 
 /// The embedding application must still provide valid readable pointer storage.
@@ -99,48 +131,57 @@ SwiftCompilerResult
 swift_compiler_complete(const SwiftCompilerCompletionRequest *request) noexcept {
   std::lock_guard<std::mutex> lock(operationMutex);
   if (!sessionReusable) {
-    return copyResult(
-        {1, false,
-         completionDocument("failure",
-                            "The compiler session cannot be reused. Restart the process.")});
+    return sessionFailure();
   }
   if (request == nullptr || request->requestID == 0 ||
       !validArguments(request->argumentCount, request->arguments) || request->path == nullptr ||
       request->source == nullptr || request->offset > request->sourceLength ||
       request->maximumResults == 0) {
     return copyResult(
-        {1, true, completionDocument("failure", "The completion request is incomplete.")});
+        {1, true, requestDocument("failure", "The completion request is incomplete.")});
   }
   // A cursor inside a multibyte character would split the filter text and the replacement range.
   if (request->offset < request->sourceLength &&
       (static_cast<unsigned char>(request->source[request->offset]) & 0xC0) == 0x80) {
     return copyResult(
         {1, true,
-         completionDocument("failure", "The completion offset is inside a UTF-8 character.")});
+         requestDocument("failure", "The completion offset is inside a UTF-8 character.")});
   }
-  const uint64_t identifier = request->requestID;
-  std::shared_ptr<std::atomic<bool>> cancellation;
-  {
-    std::lock_guard<std::mutex> guard(cancellationMutex);
-    auto pending = std::find(pendingCancellations.begin(), pendingCancellations.end(), identifier);
-    if (pending != pendingCancellations.end()) {
-      pendingCancellations.erase(pending);
-      return copyResult({SWIFT_COMPILER_COMPLETION_CANCELLED, true,
-                         completionDocument("cancelled", "The completion request was cancelled.")});
-    }
-    cancellation = std::make_shared<std::atomic<bool>>(false);
-    runningCompletion = identifier;
-    runningCancellation = cancellation;
+  auto cancellation = beginCancellable(request->requestID);
+  if (!cancellation) {
+    return copyResult({SWIFT_COMPILER_COMPLETION_CANCELLED, true,
+                       requestDocument("cancelled", "The completion request was cancelled.")});
   }
   const swift_toolchain::CompletionRequest backendRequest{
       request->argumentCount, request->arguments, request->path,           request->source,
       request->sourceLength,  request->offset,    request->maximumResults, request->cacheDirectory};
   auto result = swift_toolchain::runCompletion(backendRequest, cancellation);
-  {
-    std::lock_guard<std::mutex> guard(cancellationMutex);
-    runningCompletion = 0;
-    runningCancellation.reset();
+  endCancellable();
+  return copyResult(result);
+}
+
+SwiftCompilerResult
+swift_compiler_annotate(const SwiftCompilerAnnotationRequest *request) noexcept {
+  std::lock_guard<std::mutex> lock(operationMutex);
+  if (!sessionReusable) {
+    return sessionFailure();
   }
+  if (request == nullptr || request->requestID == 0 ||
+      !validArguments(request->argumentCount, request->arguments) || request->path == nullptr ||
+      request->source == nullptr) {
+    return copyResult(
+        {1, true, requestDocument("failure", "The annotation request is incomplete.")});
+  }
+  auto cancellation = beginCancellable(request->requestID);
+  if (!cancellation) {
+    return copyResult({SWIFT_COMPILER_COMPLETION_CANCELLED, true,
+                       requestDocument("cancelled", "The annotation request was cancelled.")});
+  }
+  const swift_toolchain::AnnotationRequest backendRequest{request->argumentCount,
+                                                          request->arguments, request->path,
+                                                          request->source, request->sourceLength};
+  auto result = swift_toolchain::runAnnotation(backendRequest, cancellation);
+  endCancellable();
   return copyResult(result);
 }
 
@@ -149,7 +190,7 @@ void swift_compiler_cancel_completion(uint64_t requestID) noexcept {
     return;
   }
   std::lock_guard<std::mutex> guard(cancellationMutex);
-  if (requestID == runningCompletion && runningCancellation) {
+  if (requestID == runningRequest && runningCancellation) {
     runningCancellation->store(true);
     return;
   }

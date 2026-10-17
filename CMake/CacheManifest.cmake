@@ -16,8 +16,8 @@ function(toolchain_native_identity output)
     CMake/IncludeBridge.cmake CMake/CompilerSupportModules.cmake Sources/CompilerBridge/CMakeLists.txt
     Sources/CompilerBridge/SwiftCompilerBridge.cpp Sources/CompilerBridge/SwiftCompilerBridge.h
     Sources/CompilerBridge/NativeBackend.cpp Sources/CompilerBridge/CompletionBackend.cpp
-    Sources/CompilerBridge/SemanticSupport.cpp Sources/CompilerBridge/SemanticSupport.h
-    Sources/CompilerBridge/CompilerBackend.h)
+    Sources/CompilerBridge/AnnotationBackend.cpp Sources/CompilerBridge/SemanticSupport.cpp
+    Sources/CompilerBridge/SemanticSupport.h Sources/CompilerBridge/CompilerBackend.h)
   set(identity "platform ${TOOLCHAIN_PLATFORM}\n")
   foreach(path IN LISTS paths)
     file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/${path}" checksum)
