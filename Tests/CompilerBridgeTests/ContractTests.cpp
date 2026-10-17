@@ -121,8 +121,10 @@ void checkCompletionValidation() {
   noResults.maximumResults = 0;
   auto noPath = completionRequest(3, arguments, "let a = 1");
   noPath.path = nullptr;
+  // The cursor at offset 3 falls between the two bytes of "é".
+  auto insideCharacter = completionRequest(4, arguments, "le\xC3\xA9");
   for (const SwiftCompilerCompletionRequest *request :
-       {&zeroIdentifier, &pastEnd, &noResults, &noPath}) {
+       {&zeroIdentifier, &pastEnd, &noResults, &noPath, &insideCharacter}) {
     auto result = swift_compiler_complete(request);
     expect(result.exitCode == 1 && result.canRunAgain, "An invalid completion lost its status.");
     expect(documentContains(result, "\"status\":\"failure\""), "An invalid completion lacks JSON.");

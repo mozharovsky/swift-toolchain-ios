@@ -52,7 +52,7 @@ __attribute__((visibility("default"))) SwiftCompilerResult
 swift_compiler_autolink(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
 
 /// The WebAssembly linker borrows trusted arguments and preserves its native reuse status.
-/// A nonreusable result prevents every later frontend, linker, and object-reader call.
+/// A nonreusable result prevents every later frontend, linker, object-reader, and completion call.
 __attribute__((visibility("default"))) SwiftCompilerResult
 swift_compiler_link(int32_t count, const char *const *arguments) SWIFT_COMPILER_NOEXCEPT;
 
@@ -72,7 +72,8 @@ typedef struct {
   const char *source;
   /// The source length in bytes.
   size_t sourceLength;
-  /// The cursor as a UTF-8 byte offset into the source, at most sourceLength.
+  /// The cursor as a UTF-8 byte offset into the source, at most sourceLength. It falls on a
+  /// character boundary, so it never points at a continuation byte.
   size_t offset;
   /// The largest number of ranked items that the result lists, which is positive.
   uint32_t maximumResults;

@@ -111,6 +111,13 @@ swift_compiler_complete(const SwiftCompilerCompletionRequest *request) noexcept 
     return copyResult(
         {1, true, completionDocument("failure", "The completion request is incomplete.")});
   }
+  // A cursor inside a multibyte character would split the filter text and the replacement range.
+  if (request->offset < request->sourceLength &&
+      (static_cast<unsigned char>(request->source[request->offset]) & 0xC0) == 0x80) {
+    return copyResult(
+        {1, true,
+         completionDocument("failure", "The completion offset is inside a UTF-8 character.")});
+  }
   const uint64_t identifier = request->requestID;
   std::shared_ptr<std::atomic<bool>> cancellation;
   {

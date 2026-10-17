@@ -24,16 +24,18 @@ Every returned diagnostic allocation belongs to the caller. Release it once with
 preserves embedded NUL bytes. A null pointer can be released safely. Allocation failure returns no
 message and marks the process's compiler session nonreusable.
 
-All three operations share one mutex because the upstream libraries retain global state. Separate
-threads may call the bridge, but their compiler operations execute in sequence. Consumers must not
-bypass that sequence by calling Swift or LLD directly at the same time. When bundled macros are
-enabled, submit compiler work from a worker queue and keep the main queue available. Macro callbacks
-synchronously enter the upstream server on its required main actor. Blocking the main queue while
-waiting for another compiler call can prevent those callbacks from completing.
+Every compiler operation shares one mutex because the upstream libraries retain global state. This
+includes completion and its reset. Separate threads may call the bridge, but their compiler
+operations execute in sequence. Consumers must not bypass that sequence by calling Swift or LLD
+directly at the same time. When bundled macros are enabled, submit compiler work from a worker queue
+and keep the main queue available. Macro callbacks synchronously enter the upstream server on its
+required main actor. Blocking the main queue while waiting for another compiler call can prevent
+those callbacks from completing.
 
 A nonzero exit code can be an ordinary source or argument error. `canRunAgain` distinguishes a
 reusable failure from an invalidated native session. Once LLD reports a nonreusable result, later
-frontend, linker, and object-reader calls fail before entering the backend. There is no reset API.
+frontend, linker, object-reader, and completion calls fail before entering the backend. No API
+restores a nonreusable session. `swift_compiler_reset_completion` only drops completion caches.
 
 Fatal compiler failures can still terminate the process. The C++ boundary does not promise exception,
 assertion, signal, or out-of-memory recovery. Frontend diagnostics are captured after compiler setup.
@@ -72,9 +74,9 @@ crash recovery or certify an application for distribution.
 
 `swift_compiler_complete` lists the completions at a cursor for an editor. Its request names the
 same trusted frontend arguments that a compile of the project uses, the input path that a borrowed
-source buffer replaces, and the cursor as a UTF-8 byte offset. Identifier characters before the
-cursor become the filter text, and completion runs at the start of that identifier, as in
-SourceKit-LSP.
+source buffer replaces, and the cursor as a UTF-8 byte offset on a character boundary. The bridge
+rejects an offset inside a multibyte character. Identifier characters before the cursor become the
+filter text, and completion runs at the start of that identifier, as in SourceKit-LSP.
 
 The backend keeps one `IDEInspectionInstance` and one module result cache for the process, as
 SourceKit does for a service. A request with the same arguments, path, and cache directory reuses
