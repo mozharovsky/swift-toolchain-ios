@@ -5,8 +5,9 @@ file(REAL_PATH "${TOOLCHAIN_NATIVE_CACHE}" TOOLCHAIN_NATIVE_CACHE)
 set(TOOLCHAIN_SOURCE_ROOT "${TOOLCHAIN_NATIVE_CACHE}/sources")
 include("${CMAKE_CURRENT_LIST_DIR}/Inputs.cmake")
 file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_digest)
+toolchain_native_compiler_identity(TOOLCHAIN_NATIVE_COMPILER_IDENTITY)
 string(SHA256 input_digest
-  "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}")
+  "${lock_digest}${TOOLCHAIN_PATCH_SHA256}${TOOLCHAIN_METADATA_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256}${TOOLCHAIN_RESTRICTED_LLVM_PATCH_SHA256}${TOOLCHAIN_NATIVE_COMPILER_IDENTITY}")
 set(TOOLCHAIN_BUILD_ROOT "${TOOLCHAIN_NATIVE_CACHE}/build/${input_digest}")
 string(APPEND TOOLCHAIN_BUILD_ROOT "/${TOOLCHAIN_PLATFORM}")
 set(TOOLCHAIN_SWIFT_BUILD "${TOOLCHAIN_BUILD_ROOT}/swift-ios")
@@ -26,6 +27,7 @@ string(JSON recorded_patch GET "${native_manifest}" frontendPatchSHA256)
 string(JSON recorded_metadata_patch GET "${native_manifest}" filesystemMetadataPatchSHA256)
 string(JSON recorded_restricted_swift_patch GET "${native_manifest}" restrictedSwiftPatchSHA256)
 string(JSON recorded_restricted_llvm_patch GET "${native_manifest}" restrictedLLVMPatchSHA256)
+string(JSON TOOLCHAIN_NATIVE_COMPILER GET "${native_manifest}" nativeCompiler)
 if(NOT recorded_lock STREQUAL lock_digest OR NOT recorded_patch STREQUAL TOOLCHAIN_PATCH_SHA256
     OR NOT recorded_metadata_patch STREQUAL TOOLCHAIN_METADATA_PATCH_SHA256
     OR NOT recorded_restricted_swift_patch STREQUAL TOOLCHAIN_RESTRICTED_SWIFT_PATCH_SHA256

@@ -41,10 +41,14 @@ public:
 
 } // namespace
 
-swift_toolchain::BackendResult swift_toolchain::runFrontend(int32_t count,
-                                                            const char *const *arguments) {
+void swift_toolchain::prepareNativeCompiler() {
   INITIALIZE_LLVM();
   std::call_once(swiftModuleInitialization, initializeSwiftModules);
+}
+
+swift_toolchain::BackendResult swift_toolchain::runFrontend(int32_t count,
+                                                            const char *const *arguments) {
+  prepareNativeCompiler();
   std::string message;
   llvm::raw_string_ostream stream(message);
   DiagnosticCapture capture(stream);

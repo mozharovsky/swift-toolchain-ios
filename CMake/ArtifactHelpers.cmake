@@ -86,3 +86,13 @@ function(toolchain_inspect_library binary)
     message(FATAL_ERROR "The native input must target the selected arm64 iOS platform at the declared deployment floor.")
   endif()
 endfunction()
+
+# Packaging and verification read the ABI version of the header that the bridge was compiled with.
+function(toolchain_bridge_abi output)
+  file(STRINGS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../Sources/CompilerBridge/SwiftCompilerBridge.h"
+    abi_line REGEX "^#define SWIFT_COMPILER_BRIDGE_ABI_VERSION [0-9]+u$")
+  if(NOT abi_line MATCHES "^#define SWIFT_COMPILER_BRIDGE_ABI_VERSION ([0-9]+)u$")
+    message(FATAL_ERROR "The bridge header must define one numeric ABI version.")
+  endif()
+  set(${output} "${CMAKE_MATCH_1}" PARENT_SCOPE)
+endfunction()

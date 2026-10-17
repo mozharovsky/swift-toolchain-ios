@@ -74,6 +74,45 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Accepts both bridge ABI versions and rejects one that no consumer header defines.
+    ///
+    /// - Parameter version: A bridge ABI version.
+    /// - Throws: Fixture loading or JSON conversion fails, or a supported version fails validation.
+    @Test(arguments: [1, 2, 3, 0])
+    func checksBridgeABI(version: Int) throws {
+        let manifest = try Self.modified { object in object["bridgeABI"] = version }
+        if version == 1 || version == 2 {
+            try manifest.validate()
+        } else {
+            #expect(throws: ToolchainError.self) { try manifest.validate() }
+        }
+    }
+
+    /// Reads releases that predate the native compiler record, so `verify-artifact-manifest`
+    /// keeps accepting alpha releases that consumers already pin.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyNativeCompiler() throws {
+        let manifest = try Self.modified { object in object.removeValue(forKey: "nativeCompiler") }
+        #expect(manifest.nativeCompiler == nil)
+        try manifest.validate()
+    }
+
+    /// Rejects a compiler record that does not name the selected Xcode's clang and its version,
+    /// so `verify-artifact-manifest` fails before a consumer selects such a release. Every
+    /// version component must be numeric.
+    ///
+    /// - Parameter compiler: A malformed or foreign compiler record.
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test(arguments: [
+        "", "Clang 21.0.0", "AppleClang", "AppleClang 21.0.0\nGNU", "AppleClang .",
+        "AppleClang 21..0", "AppleClang 21.",
+    ])
+    func rejectsInvalidNativeCompiler(compiler: String) throws {
+        let manifest = try Self.modified { object in object["nativeCompiler"] = compiler }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// Reads earlier manifests without inferring native restrictions from absent metadata.
     ///
     /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
@@ -246,7 +285,7 @@ struct ArtifactManifestTests {
             noticesSHA256: String(repeating: "b", count: 64), macroAdapterSHA256: String(
                 repeating: "c",
                 count: 64,
-            ), inputs: inputs,
+            ), nativeCompiler: "AppleClang 21.0.0.21000123", inputs: inputs,
             macroBuildSupport: MacroBuildSupport(
                 archive: "MacroBuildSupport.zip",
                 checksum: String(repeating: "f", count: 64),

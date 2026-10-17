@@ -52,14 +52,18 @@ mise exec -- cmake -DTOOLCHAIN_ARTIFACT_OUTPUT="$TOOLCHAIN_ARTIFACT_OUTPUT" \
   -P CMake/VerifyArtifacts.cmake
 ```
 
-The compiler's post-link step writes `NativeArtifacts.json` with input identities and each native
-library's content hash. Macro preparation verifies that receipt and records its own linked inputs.
+The compiler's post-link step writes `NativeArtifacts.json` with input identities, the native
+compiler, and each native library's content hash. Macro preparation verifies that receipt and records its own linked inputs.
 Packaging rejects missing, stale, or modified cache files before copying them. These receipts detect
 cache integrity failures and are not signed build attestations. Archive builds disable automatic Git revision lookup so upstream tools cannot report a parent checkout as the compiler source. Exact upstream commits remain in the validated manifest.
 
 The SDK archive must match the exact SHA-256 in `Toolchain.lock.json`. Packaging never reads an
 installed Apple SDK as guest input. Xcode supplies the SDK only when compiling native libraries
 and the small resource anchor.
+
+The artifact manifest records `nativeCompiler`, the compiler identity and version that built the
+native libraries. Packaging requires the device and simulator receipts to name the same compiler.
+Manifests from releases before this record omit the field.
 
 Artifact schema 2 requires device and simulator slices for every framework. Each slice records its
 XCFramework identifier, native compiler triple, executable checksum, and executable size. Schema 1
@@ -72,6 +76,10 @@ index have independent schemas.
 `XCFrameworks` combines both arm64 environments with rewritten install names. `Archives` contains ZIP files for SwiftPM binary targets. `ArtifactManifest.json`
 records configuration, patch, SDK, archive, and executable identities. The generated `Package.swift`
 exposes one local `SwiftCompilerArtifacts` product for integration checks.
+
+The manifest's `bridgeABI` repeats the version in the bridge header that the libraries were built
+with. Verification requires the compiler bridge to export every entry point of that version,
+including the completion functions of version 2.
 
 Packaging removes local symbol-table entries from staged framework copies with `strip -x`.
 It checks that exported and imported global symbol names remain identical and that each binary's

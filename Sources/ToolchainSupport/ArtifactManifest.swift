@@ -7,6 +7,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Framework bundle metadata uses the same three-part release version.
     package let version: String
     /// The C result layout must match the embedding package's compiled header.
+    ///
+    /// Version 2 adds semantic completion and keeps the version 1 operations unchanged.
     package let bridgeABI: Int
     /// The base device triple determines the deployment floor of both native environments.
     package let compilerHost: String
@@ -36,6 +38,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let noticesSHA256: String
     /// Native main-queue routing is tracked independently of the upstream macro entry rename.
     package let macroAdapterSHA256: String
+    /// The compiler identity and version that built the native libraries, such as
+    /// `AppleClang 21.0.0.21000123`.
+    ///
+    /// Releases before the compiler was recorded omit it. Consumers can compare it when two
+    /// releases differ in size or behavior without a source change.
+    package let nativeCompiler: String?
     /// Complete source and SDK identities remain available after archives leave the build tree.
     package let inputs: ToolchainConfiguration
     /// Native macro build inputs remain outside the application's SwiftPM product.
@@ -68,8 +76,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
-        guard [1, 2].contains(schemaVersion), bridgeABI == 1 else {
-            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1.")
+        guard [1, 2].contains(schemaVersion), [1, 2].contains(bridgeABI) else {
+            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1 or 2.")
         }
         guard version.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil
         else {
@@ -93,6 +101,13 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
             try CompilerArtifact.validateChecksum(checksum)
         }
         try macroBuildSupport.validate()
+        if let nativeCompiler,
+           nativeCompiler.range(
+               of: #"^AppleClang [0-9]+(\.[0-9]+)*$"#,
+               options: .regularExpression,
+           ) == nil {
+            throw .invalidArtifact("Record the native compiler as AppleClang and its version.")
+        }
         if let filesystemMetadataPatchSHA256 {
             try CompilerArtifact.validateChecksum(filesystemMetadataPatchSHA256)
         }
