@@ -26,8 +26,8 @@ preserves embedded NUL bytes. A null pointer can be released safely. Allocation 
 message and marks the process's compiler session nonreusable.
 
 Every compiler operation shares one mutex because the upstream libraries retain global state. This
-includes completion and its reset. Separate threads may call the bridge, but their compiler
-operations execute in sequence. Consumers must not bypass that sequence by calling Swift or LLD
+includes completion, its reset, and annotation. Separate threads may call the bridge, but their
+compiler operations execute in sequence. Consumers must not bypass that sequence by calling Swift or LLD
 directly at the same time. When bundled macros are enabled, submit compiler work from a worker queue
 and keep the main queue available. Macro callbacks synchronously enter the upstream server on its
 required main actor. Blocking the main queue while waiting for another compiler call can prevent
@@ -35,7 +35,7 @@ those callbacks from completing.
 
 A nonzero exit code can be an ordinary source or argument error. `canRunAgain` distinguishes a
 reusable failure from an invalidated native session. Once LLD reports a nonreusable result, later
-frontend, linker, object-reader, and completion calls fail before entering the backend. No API
+frontend, linker, object-reader, completion, and annotation calls fail before entering the backend. No API
 restores a nonreusable session. `swift_compiler_reset_completion` only drops completion caches.
 
 Fatal compiler failures can still terminate the process. The C++ boundary does not promise exception,
