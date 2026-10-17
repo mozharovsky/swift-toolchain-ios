@@ -4,12 +4,12 @@ foreach(required TOOLCHAIN_BUILD_ROOT TOOLCHAIN_SOURCE_ROOT TOOLCHAIN_NINJA)
   endif()
 endforeach()
 include("${CMAKE_CURRENT_LIST_DIR}/../Inputs.cmake")
-execute_process(COMMAND xcrun --find clang OUTPUT_VARIABLE TOOLCHAIN_CLANG
-  OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
-execute_process(COMMAND xcrun --find clang++ OUTPUT_VARIABLE TOOLCHAIN_CLANGXX
-  OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
-# Every stage uses the selected Xcode's compilers, so a cc or c++ earlier on PATH cannot build the
-# native libraries.
+execute_process(COMMAND xcrun --toolchain "${TOOLCHAIN_XCODE_TOOLCHAIN}" --find clang
+  OUTPUT_VARIABLE TOOLCHAIN_CLANG OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND xcrun --toolchain "${TOOLCHAIN_XCODE_TOOLCHAIN}" --find clang++
+  OUTPUT_VARIABLE TOOLCHAIN_CLANGXX OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+# Every stage uses the selected Xcode's compilers, so neither a cc or c++ earlier on PATH nor an
+# installed Swift toolchain can build the native libraries.
 set(CMAKE_C_COMPILER "${TOOLCHAIN_CLANG}" CACHE FILEPATH "Xcode supplies the C compiler." FORCE)
 set(CMAKE_CXX_COMPILER "${TOOLCHAIN_CLANGXX}" CACHE FILEPATH "Xcode supplies the C++ compiler." FORCE)
 

@@ -74,7 +74,8 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
-    /// Reads releases that predate the native compiler record.
+    /// Reads releases that predate the native compiler record, so `verify-artifact-manifest`
+    /// keeps accepting alpha releases that consumers already pin.
     ///
     /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
     @Test func acceptsLegacyNativeCompiler() throws {
@@ -83,11 +84,16 @@ struct ArtifactManifestTests {
         try manifest.validate()
     }
 
-    /// Rejects a compiler record that does not name the selected Xcode's clang and its version.
+    /// Rejects a compiler record that does not name the selected Xcode's clang and its version,
+    /// so `verify-artifact-manifest` fails before a consumer selects such a release. Every
+    /// version component must be numeric.
     ///
     /// - Parameter compiler: A malformed or foreign compiler record.
     /// - Throws: Fixture loading or JSON conversion fails.
-    @Test(arguments: ["", "Clang 21.0.0", "AppleClang", "AppleClang 21.0.0\nGNU"])
+    @Test(arguments: [
+        "", "Clang 21.0.0", "AppleClang", "AppleClang 21.0.0\nGNU", "AppleClang .",
+        "AppleClang 21..0", "AppleClang 21.",
+    ])
     func rejectsInvalidNativeCompiler(compiler: String) throws {
         let manifest = try Self.modified { object in object["nativeCompiler"] = compiler }
         #expect(throws: ToolchainError.self) { try manifest.validate() }

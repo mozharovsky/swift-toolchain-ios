@@ -100,7 +100,10 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         }
         try macroBuildSupport.validate()
         if let nativeCompiler,
-           nativeCompiler.range(of: #"^AppleClang [0-9.]+$"#, options: .regularExpression) == nil {
+           nativeCompiler.range(
+               of: #"^AppleClang [0-9]+(\.[0-9]+)*$"#,
+               options: .regularExpression,
+           ) == nil {
             throw .invalidArtifact("Record the native compiler as AppleClang and its version.")
         }
         if let filesystemMetadataPatchSHA256 {

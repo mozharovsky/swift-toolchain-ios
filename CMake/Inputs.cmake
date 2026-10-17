@@ -31,10 +31,14 @@ elseif(TOOLCHAIN_PLATFORM STREQUAL "simulator")
 else()
   message(FATAL_ERROR "TOOLCHAIN_PLATFORM must be device or simulator.")
 endif()
+# Compiler lookups name Xcode's own toolchain, because the TOOLCHAINS variable can otherwise make
+# xcrun return the clang of an installed Swift toolchain.
+set(TOOLCHAIN_XCODE_TOOLCHAIN com.apple.dt.toolchain.XcodeDefault)
 # The selected Xcode's C++ compiler version joins the native build identity. A different Xcode
 # then builds in a separate directory instead of mixing objects from two compilers.
 function(toolchain_native_compiler_identity output)
-  execute_process(COMMAND xcrun clang++ --version OUTPUT_VARIABLE version
+  execute_process(COMMAND xcrun --toolchain "${TOOLCHAIN_XCODE_TOOLCHAIN}" clang++ --version
+    OUTPUT_VARIABLE version
     OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
   string(REGEX REPLACE "\n.*" "" version "${version}")
   set(${output} "${version}" PARENT_SCOPE)

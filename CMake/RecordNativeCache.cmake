@@ -17,7 +17,7 @@ string(JSON manifest SET "${manifest}" filesystemMetadataPatchSHA256 "\"${metada
 string(JSON manifest SET "${manifest}" restrictedSwiftPatchSHA256 "\"${restricted_swift_patch_hash}\"")
 string(JSON manifest SET "${manifest}" restrictedLLVMPatchSHA256 "\"${restricted_llvm_patch_hash}\"")
 # The receipt names the compiler that built the bridge stage, which the artifact manifest repeats.
-if(NOT TOOLCHAIN_NATIVE_COMPILER MATCHES "^AppleClang [0-9.]+$")
+if(NOT TOOLCHAIN_NATIVE_COMPILER MATCHES "^AppleClang [0-9]+(\\.[0-9]+)*$")
   message(FATAL_ERROR "The native libraries must be built with the selected Xcode's clang.")
 endif()
 string(JSON manifest SET "${manifest}" nativeCompiler "\"${TOOLCHAIN_NATIVE_COMPILER}\"")
