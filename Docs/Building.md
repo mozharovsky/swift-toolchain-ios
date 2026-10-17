@@ -72,7 +72,12 @@ mise exec -- cmake --build .cache/compiler-plan --target toolchain-compiler --pa
 ```
 
 The stages build host TableGen tools, required iOS LLVM/Clang/LLD libraries, the static iOS cmark
-library, and the Swift frontend with the real bridge. Native build directories are keyed by the
+library, and the Swift frontend with the real bridge.
+
+Every stage compiles with the clang of the Xcode that `xcrun` selects. A `cc` or `c++` earlier on
+`PATH` does not take part. The native build directory key includes that compiler's version, so a
+different Xcode builds in its own directory instead of reusing objects from another compiler. The
+native receipt records the compiler identity and version, such as `AppleClang 21.0.0.21000123`. Native build directories are keyed by the
 input and patch identities. Repeated explicit builds let the underlying build systems check source
 and configuration changes.
 

@@ -36,6 +36,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let noticesSHA256: String
     /// Native main-queue routing is tracked independently of the upstream macro entry rename.
     package let macroAdapterSHA256: String
+    /// The compiler identity and version that built the native libraries, such as
+    /// `AppleClang 21.0.0.21000123`.
+    ///
+    /// Releases before the compiler was recorded omit it. Consumers can compare it when two
+    /// releases differ in size or behavior without a source change.
+    package let nativeCompiler: String?
     /// Complete source and SDK identities remain available after archives leave the build tree.
     package let inputs: ToolchainConfiguration
     /// Native macro build inputs remain outside the application's SwiftPM product.
@@ -93,6 +99,10 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
             try CompilerArtifact.validateChecksum(checksum)
         }
         try macroBuildSupport.validate()
+        if let nativeCompiler,
+           nativeCompiler.range(of: #"^AppleClang [0-9.]+$"#, options: .regularExpression) == nil {
+            throw .invalidArtifact("Record the native compiler as AppleClang and its version.")
+        }
         if let filesystemMetadataPatchSHA256 {
             try CompilerArtifact.validateChecksum(filesystemMetadataPatchSHA256)
         }

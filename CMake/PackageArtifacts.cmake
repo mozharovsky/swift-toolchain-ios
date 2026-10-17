@@ -26,11 +26,15 @@ function(toolchain_prepare_platform platform macro_output)
   set(TOOLCHAIN_MACRO_OUTPUT "${macro_output}")
   include("${CMAKE_CURRENT_LIST_DIR}/PrepareNativeFrameworks.cmake")
   set(${platform}_names "${names}" PARENT_SCOPE)
+  set(${platform}_compiler "${TOOLCHAIN_NATIVE_COMPILER}" PARENT_SCOPE)
 endfunction()
 toolchain_prepare_platform(device "${device_macro_output}")
 toolchain_prepare_platform(simulator "${TOOLCHAIN_SIMULATOR_MACRO_OUTPUT}")
 if(NOT device_names STREQUAL simulator_names)
   message(FATAL_ERROR "Device and simulator framework inventories must match.")
+endif()
+if(NOT device_compiler STREQUAL simulator_compiler)
+  message(FATAL_ERROR "Device and simulator libraries must come from the same native compiler.")
 endif()
 set(names "${device_names}")
 set(macro_sdk "${TOOLCHAIN_ARTIFACT_OUTPUT}/Development/MacroBuildSupport")
@@ -118,6 +122,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"producerHasUncommittedChanges\": ${producer_dirty},\n"
   "  \"noticesSHA256\": \"${notices_checksum}\",\n"
   "  \"macroAdapterSHA256\": \"${adapter_checksum}\",\n"
+  "  \"nativeCompiler\": \"${device_compiler}\",\n"
   "  \"macroBuildSupport\": ${macro_sdk_record},\n  \"inputs\": ${TOOLCHAIN_INPUTS},\n  \"artifacts\": ${artifacts}\n}\n")
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/Package.swift"
   "// swift-tools-version: 6.3\nimport PackageDescription\n\n"

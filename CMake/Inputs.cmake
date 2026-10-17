@@ -31,6 +31,15 @@ elseif(TOOLCHAIN_PLATFORM STREQUAL "simulator")
 else()
   message(FATAL_ERROR "TOOLCHAIN_PLATFORM must be device or simulator.")
 endif()
+# The selected Xcode's C++ compiler version joins the native build identity. A different Xcode
+# then builds in a separate directory instead of mixing objects from two compilers.
+function(toolchain_native_compiler_identity output)
+  execute_process(COMMAND xcrun clang++ --version OUTPUT_VARIABLE version
+    OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+  string(REGEX REPLACE "\n.*" "" version "${version}")
+  set(${output} "${version}" PARENT_SCOPE)
+endfunction()
+
 if(NOT TOOLCHAIN_PROGRAM_TARGET STREQUAL "wasm32-unknown-wasip1")
   message(FATAL_ERROR "The current recipes emit wasm32-unknown-wasip1 programs.")
 endif()

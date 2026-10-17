@@ -74,6 +74,25 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Reads releases that predate the native compiler record.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyNativeCompiler() throws {
+        let manifest = try Self.modified { object in object.removeValue(forKey: "nativeCompiler") }
+        #expect(manifest.nativeCompiler == nil)
+        try manifest.validate()
+    }
+
+    /// Rejects a compiler record that does not name the selected Xcode's clang and its version.
+    ///
+    /// - Parameter compiler: A malformed or foreign compiler record.
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test(arguments: ["", "Clang 21.0.0", "AppleClang", "AppleClang 21.0.0\nGNU"])
+    func rejectsInvalidNativeCompiler(compiler: String) throws {
+        let manifest = try Self.modified { object in object["nativeCompiler"] = compiler }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// Reads earlier manifests without inferring native restrictions from absent metadata.
     ///
     /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
@@ -246,7 +265,7 @@ struct ArtifactManifestTests {
             noticesSHA256: String(repeating: "b", count: 64), macroAdapterSHA256: String(
                 repeating: "c",
                 count: 64,
-            ), inputs: inputs,
+            ), nativeCompiler: "AppleClang 21.0.0.21000123", inputs: inputs,
             macroBuildSupport: MacroBuildSupport(
                 archive: "MacroBuildSupport.zip",
                 checksum: String(repeating: "f", count: 64),

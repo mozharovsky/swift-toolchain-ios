@@ -8,6 +8,10 @@ execute_process(COMMAND xcrun --find clang OUTPUT_VARIABLE TOOLCHAIN_CLANG
   OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
 execute_process(COMMAND xcrun --find clang++ OUTPUT_VARIABLE TOOLCHAIN_CLANGXX
   OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+# Every stage uses the selected Xcode's compilers, so a cc or c++ earlier on PATH cannot build the
+# native libraries.
+set(CMAKE_C_COMPILER "${TOOLCHAIN_CLANG}" CACHE FILEPATH "Xcode supplies the C compiler." FORCE)
+set(CMAKE_CXX_COMPILER "${TOOLCHAIN_CLANGXX}" CACHE FILEPATH "Xcode supplies the C++ compiler." FORCE)
 
 # Prefix maps keep compiler-generated paths independent of a maintainer's checkout location.
 set(TOOLCHAIN_PREFIX_MAPS
