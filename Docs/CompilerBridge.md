@@ -1,9 +1,13 @@
 # Compiler bridge
 
-`Sources/CompilerBridge/SwiftCompilerBridge.h` declares C ABI version 1. An embedding application
-checks `swift_compiler_abi_version()` before calling the frontend, object reader, or WebAssembly
-linker. The real backend uses Swift's `performFrontend`, `autolink_extract_main`, and `lldMain`.
-It does not implement a replacement Swift parser or interpreter.
+`Sources/CompilerBridge/SwiftCompilerBridge.h` declares C ABI version 2. An embedding application
+checks `swift_compiler_abi_version()` before calling the frontend, object reader, WebAssembly
+linker, or completion. The real backend uses Swift's `performFrontend`, `autolink_extract_main`,
+and `lldMain`, and Swift's IDE inspection instance for completion. It does not implement a
+replacement Swift parser or interpreter.
+
+Version 2 adds semantic completion. The version 1 operations and their result layout are
+unchanged.
 
 The bridge links Swift's compiler implementation modules and initializes them once before entering
 the frontend. This registers the AST and SIL classes, analyses, and optimization passes that the
@@ -64,12 +68,65 @@ The native profile constrains these compiler entry points. Consumers still suppl
 recipe and enforce their own source, filesystem, and resource limits. The profile does not add
 crash recovery or certify an application for distribution.
 
+## Completion
+
+`swift_compiler_complete` lists the completions at a cursor for an editor. Its request names the
+same trusted frontend arguments that a compile of the project uses, the input path that a borrowed
+source buffer replaces, and the cursor as a UTF-8 byte offset. Identifier characters before the
+cursor become the filter text, and completion runs at the start of that identifier, as in
+SourceKit-LSP.
+
+The backend keeps one `IDEInspectionInstance` and one module result cache for the process, as
+SourceKit does for a service. A request with the same arguments, path, and cache directory reuses
+the type-checked context when the edit and the cursor stay inside one function or accessor body.
+Any other request rebuilds the context. A request that names a cache directory keeps the
+context-free results of each imported module on disk across launches. A different directory starts
+a new context, and `swift_compiler_reset_completion` drops the context and the cache in memory.
+
+Completion takes the same operation lock as the other entry points. A compile therefore delays a
+completion, and a completion delays a compile. `swift_compiler_cancel_completion` takes the
+caller's request identifier from any thread. It stops a running request at the compiler's next
+cancellation check, or a waiting request as soon as it takes the lock. The bridge remembers the
+most recent 64 identifiers cancelled before their request ran. Identifiers must stay unique for the
+process so a later request is not cancelled by mistake.
+
+Macro expansion during completion uses the same main-queue route as compilation, so a client
+calls completion from a worker. A compiler crash during completion ends the process, as a crash
+during compilation does.
+
+### Result document
+
+Every completion result carries an owned JSON document with `"schema": 1` and a `status` of
+`success`, `failure`, or `cancelled`. The exit code is zero for success,
+`SWIFT_COMPILER_COMPLETION_CANCELLED` for cancellation, and one for failure. A failure carries an
+`error` string.
+
+A successful document also carries these fields.
+
+- `completionKind` names the syntactic position, such as `dotExpr`, `stmtOrExpr`, `callArg`, or
+  `type`.
+- `reusedContext` reports whether the cached type-checked context served the request.
+- `filterText`, `replacementOffset`, and `replacementLength` describe the identifier prefix that an
+  inserted item replaces, in UTF-8 bytes.
+- `totalResults`, `matchedResults`, and `hiddenResults` count the compiler's results, those that
+  matched the filter, and those left out of an unfiltered list.
+- `items` lists at most the requested number of ranked results.
+- `diagnostics` lists the first error messages of the type check, and `timingsMs` reports the setup,
+  completion, and ranking time.
+
+Each item carries `name`, `description`, `kind`, `type`, `sourceText`, `typeRelation`, `context`,
+`module`, `brief`, and `notRecommended`. `sourceText` uses Xcode's placeholder syntax, such as
+`<#T##label: Int##Int#>`. Ranking follows SourceKit's result groups, fuzzy matching, and semantic
+context without popularity data. An unfiltered list leaves out results that are not recommended or
+have an invalid type, and a filtered list ranks them last.
+
 ## Contract tests
 
 The small CMake target links the real C ABI wrapper to an explicitly named test backend. It checks
 C header linkage, argument validation, owned messages with embedded NUL bytes, ordinary error
-recovery, shared serialization, and sticky invalidation. `TOOLCHAIN_ENABLE_SANITIZERS` defaults to
-`OFF`. Setting it to `ON` instruments the bridge and bundled-plugin host tests with ASan and UBSan.
+recovery, shared serialization, and sticky invalidation. Its completion checks cover request
+validation, cancellation before and during a run, the reset, and the poisoned session.
+`TOOLCHAIN_ENABLE_SANITIZERS` defaults to `OFF`. Setting it to `ON` instruments the bridge and bundled-plugin host tests with ASan and UBSan.
 `mise run native-check` enables this option. The test backend does not compile or interpret Swift.
 Its results are not compiler execution or physical-device evidence.
 

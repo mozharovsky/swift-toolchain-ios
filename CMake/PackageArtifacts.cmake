@@ -102,6 +102,13 @@ set(producer_dirty false)
 if(NOT producer_changes STREQUAL "")
   set(producer_dirty true)
 endif()
+# The manifest repeats the ABI version of the header that the bridge was compiled with.
+file(STRINGS "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/CompilerBridge/SwiftCompilerBridge.h" abi_line
+  REGEX "^#define SWIFT_COMPILER_BRIDGE_ABI_VERSION [0-9]+u$")
+if(NOT abi_line MATCHES "^#define SWIFT_COMPILER_BRIDGE_ABI_VERSION ([0-9]+)u$")
+  message(FATAL_ERROR "The bridge header must define one numeric ABI version.")
+endif()
+set(bridge_abi "${CMAKE_MATCH_1}")
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch" bundled_macro_patch)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Licenses/SDKNotices.json" notices_checksum)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter_checksum)
@@ -109,7 +116,7 @@ file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_checksum)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch_checksum)
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "{\n  \"schemaVersion\": 2,\n  \"version\": \"${TOOLCHAIN_ARTIFACT_VERSION}\",\n"
-  "  \"bridgeABI\": 1,\n  \"compilerHost\": \"${TOOLCHAIN_COMPILER_HOST}\",\n"
+  "  \"bridgeABI\": ${bridge_abi},\n  \"compilerHost\": \"${TOOLCHAIN_COMPILER_HOST}\",\n"
   "  \"programTarget\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n"
   "  \"configurationSHA256\": \"${lock_checksum}\",\n"
   "  \"frontendPatchSHA256\": \"${TOOLCHAIN_PATCH_SHA256}\",\n"

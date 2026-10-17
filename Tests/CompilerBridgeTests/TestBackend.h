@@ -9,6 +9,12 @@ int callCount();
 /// A value above one would violate the serialization required by real LLVM state.
 int maximumConcurrency();
 
+/// The number of times the bridge dropped the completion context.
+int completionResets();
+
+/// Whether a completion is waiting for its cancellation flag inside the test backend.
+bool completionWaiting();
+
 } // namespace test_backend
 
 #endif

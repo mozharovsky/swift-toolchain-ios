@@ -3,6 +3,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <string>
 #include <thread>
 
 namespace {
@@ -46,6 +47,53 @@ swift_toolchain::BackendResult swift_toolchain::runAutolink(int32_t, const char 
 
 swift_toolchain::BackendResult swift_toolchain::runLinker(int32_t, const char *const *arguments) {
   return respond(arguments[0]);
+}
+
+namespace {
+
+/// Completion resets that the bridge requested.
+std::atomic<int> resets{0};
+
+/// Whether a completion is waiting for cancellation, which lets a test cancel at the right time.
+std::atomic<bool> waiting{false};
+
+} // namespace
+
+swift_toolchain::BackendResult
+swift_toolchain::runCompletion(const swift_toolchain::CompletionRequest &request,
+                               std::shared_ptr<std::atomic<bool>> cancellation) {
+  const std::string source(request.source, request.sourceLength);
+  if (source == "wait-for-cancellation") {
+    ++calls;
+    waiting = true;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!cancellation->load() && std::chrono::steady_clock::now() < deadline) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    waiting = false;
+    if (cancellation->load()) {
+      return {2, true, "{\"schema\":1,\"status\":\"cancelled\"}"};
+    }
+    return {1, true, "{\"schema\":1,\"status\":\"failure\"}"};
+  }
+  auto result = respond(request.arguments[0]);
+  if (result.exitCode == 0) {
+    result.message =
+        "{\"schema\":1,\"status\":\"success\",\"offset\":" + std::to_string(request.offset) + "}";
+  }
+  return result;
+}
+
+void swift_toolchain::resetCompletion() {
+  ++resets;
+}
+
+int test_backend::completionResets() {
+  return resets.load();
+}
+
+bool test_backend::completionWaiting() {
+  return waiting.load();
 }
 
 int test_backend::callCount() {

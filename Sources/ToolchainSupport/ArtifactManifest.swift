@@ -7,6 +7,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Framework bundle metadata uses the same three-part release version.
     package let version: String
     /// The C result layout must match the embedding package's compiled header.
+    ///
+    /// Version 2 adds semantic completion and keeps the version 1 operations unchanged.
     package let bridgeABI: Int
     /// The base device triple determines the deployment floor of both native environments.
     package let compilerHost: String
@@ -74,8 +76,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
-        guard [1, 2].contains(schemaVersion), bridgeABI == 1 else {
-            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1.")
+        guard [1, 2].contains(schemaVersion), [1, 2].contains(bridgeABI) else {
+            throw .invalidArtifact("Use artifact schema 1 or 2 and compiler bridge ABI 1 or 2.")
         }
         guard version.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil
         else {
