@@ -126,9 +126,11 @@ typedef struct {
 ///
 /// Every request builds a new compiler instance, so the cost follows the size of the input and
 /// does not depend on earlier requests. The other inputs are parsed, and only the primary input's
-/// function bodies are type-checked. Annotation shares the operation lock with the other entry
-/// points, and the same macro rules apply, so clients call it from a worker with a large stack
-/// while the main queue stays available.
+/// function bodies are type-checked. A type check without errors continues into SILGen and the
+/// mandatory diagnostic passes for the primary input, which add flow diagnostics such as a missing
+/// return. SILGen and the passes do not stop for a cancellation, which takes effect before each of
+/// them. Annotation shares the operation lock with the other entry points, and the same macro rules
+/// apply, so clients call it from a worker with a large stack while the main queue stays available.
 ///
 /// The exit code is zero for a result, SWIFT_COMPILER_COMPLETION_CANCELLED for a cancelled request,
 /// and another nonzero value for an invalid request or a compiler failure. Source errors still

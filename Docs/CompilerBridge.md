@@ -4,8 +4,8 @@
 checks `swift_compiler_abi_version()` before calling the frontend, object reader, WebAssembly
 linker, completion, or annotation. The real backend uses Swift's `performFrontend`,
 `autolink_extract_main`, and `lldMain`. Completion uses Swift's IDE inspection instance, and
-annotation type-checks with a compiler instance and Swift's source entity walker. It does not
-implement a replacement Swift parser or interpreter.
+annotation type-checks with a compiler instance and Swift's source entity walker, then runs Swift's
+mandatory SIL diagnostic passes. It does not implement a replacement Swift parser or interpreter.
 
 Version 2 adds semantic completion, and version 3 adds semantic annotation. The earlier operations
 and their result layout are unchanged.
@@ -138,6 +138,21 @@ requests. Annotation takes the operation lock and the macro rules of completion,
 identifier space. A cancelled type check leaves expressions unsolved, so the bridge returns the
 cancelled status instead of partial references.
 
+Some diagnostics come from SIL rather than from the type check. They include a missing return, a
+`guard` body that falls through, use before initialization, unreachable code, infinite recursion,
+static exclusivity violations, constant overflow and division by zero, and data-race regions under
+strict concurrency. When the type check reports no errors, the request lowers the primary input to
+SIL and runs Swift's mandatory diagnostic passes, as a compile does before optimization. A failed
+type check skips this step, because SILGen requires an AST without errors.
+
+SILGen and the passes have no cancellation checks of their own. The request checks before SILGen
+and again before the passes. A cancellation during SILGen therefore takes effect when SILGen
+finishes, and a request cancelled during the passes returns its complete result. SILGen also
+type-checks some code on demand, such as synthesized `Equatable` and `Hashable` bodies and stored
+properties of other inputs whose types come from their initial values. The request detaches the
+compiler's cancellation flag before SILGen, so a cancellation cannot fail that code while it is
+lowered.
+
 The backend follows SourceKit's semantic annotator. It reports references to declarations and
 leaves out implicit references, `self`, unavailable declarations, and the `nil` literal that a
 pattern turns into `Optional.none`. A reference to an initializer through its type's name reports
@@ -155,12 +170,15 @@ Every annotation result carries an owned JSON document with `"schema": 1` and a 
 A successful document also carries these fields.
 
 - `module` names the main module of the frontend arguments.
+- `checkedSIL` reports whether the SIL diagnostic passes ran after a type check without errors.
 - `references` lists the references in source order of the walk. Each carries `offset` and
   `length` in UTF-8 bytes, the referenced declaration's `kind` with the completion item kind
   names, its `module`, and `project`, which is true for declarations of the main module.
-- `diagnostics` lists at most 100 errors and warnings. Each carries `severity`, `message`, and
-  the UTF-8 `offset` of its location when the location falls in the primary input.
-- `timingsMs` reports the setup, type-check, and walk time.
+- `diagnostics` lists at most 100 errors and warnings of the type check and the SIL passes. Each
+  carries `severity`, `message`, and the UTF-8 `offset` of its location when the location falls
+  in the primary input.
+- `timingsMs` reports the setup, type-check, walk, and SIL time. The SIL time is zero when the
+  passes did not run.
 
 The module comparison decides `project`, because an embedding application can supply its SDK
 modules through ordinary import paths, where the compiler treats them as user modules.

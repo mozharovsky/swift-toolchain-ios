@@ -69,10 +69,13 @@ struct AnnotationRequest {
   size_t sourceLength;
 };
 
-/// Type-checks the input at the request's path and returns its references as a JSON document.
+/// Type-checks the input at the request's path and returns its references and diagnostics as a
+/// JSON document.
 ///
-/// The backend stops at the compiler's next cancellation check once the flag becomes true and
-/// returns the cancelled status. The exit code follows the public annotation contract.
+/// A type check without errors continues into SILGen and the mandatory SIL diagnostic passes. The
+/// backend stops at the next cancellation check once the flag becomes true and returns the
+/// cancelled status. SILGen and the passes have no checks of their own, so the backend checks
+/// before each of them. The exit code follows the public annotation contract.
 BackendResult runAnnotation(const AnnotationRequest &request,
                             std::shared_ptr<std::atomic<bool>> cancellation);
 
