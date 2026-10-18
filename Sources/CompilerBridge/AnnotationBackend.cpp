@@ -11,6 +11,8 @@
 #include "swift/IDE/CodeCompletionResult.h"
 #include "swift/IDE/SourceEntityWalker.h"
 #include "swift/Parse/Lexer.h"
+#include "swift/SIL/SILModule.h"
+#include "swift/SILOptimizer/PassManager/Passes.h"
 #include "swift/Subsystems.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -37,7 +39,8 @@ struct LocatedDiagnostic {
   swift::SourceLoc location;
 };
 
-/// Errors and warnings of the type check, which an editor can show without a build.
+/// Errors and warnings of the type check and the SIL diagnostic passes, which an editor can show
+/// without a build.
 ///
 /// Notes and remarks are left out because they explain other diagnostics.
 class DiagnosticCollector : public swift::DiagnosticConsumer {
@@ -200,6 +203,34 @@ swift_toolchain::runAnnotation(const swift_toolchain::AnnotationRequest &request
   ReferenceCollector references(instance.getSourceMgr(), bufferID);
   references.walk(primary);
   const double walkMilliseconds = millisecondsSince(walkStart);
+  // A cancellation during the walk can fail declarations that the walk type-checks on demand, so
+  // the request stops here whether or not the SIL passes would run.
+  if (cancelled(cancellation)) {
+    return cancelledResult();
+  }
+
+  // Missing returns, definite initialization, unreachable code, exclusivity, constant overflow,
+  // and data-race regions are diagnosed on SIL rather than by the type check. SILGen requires an
+  // AST without errors, as in a compile, so a failed type check reports only its own diagnostics.
+  const bool checksSIL = !context.hadError();
+  double silMilliseconds = 0;
+  if (checksSIL) {
+    // Lowering type-checks some code on demand, such as synthesized conformance bodies and stored
+    // properties of other inputs whose types come from their initial values. The solver fails
+    // every expression while the flag is set, and SILGen cannot lower such a failure. The flag is
+    // therefore detached, and the request checks cancellation itself between the steps.
+    context.CancellationFlag = nullptr;
+    const auto silStart = std::chrono::steady_clock::now();
+    // Without IRGen options the pass manager builds no IRGen module or LLVM target machine. Only
+    // code generation choices query one, such as folding a type's size or emitting a static object.
+    std::unique_ptr<swift::SILModule> module = swift::performASTLowering(
+        primary, instance.getSILTypes(), instance.getInvocation().getSILOptions());
+    if (cancelled(cancellation)) {
+      return cancelledResult();
+    }
+    swift::runSILDiagnosticPasses(*module);
+    silMilliseconds = millisecondsSince(silStart);
+  }
 
   auto &sourceManager = instance.getSourceMgr();
   swift::ModuleDecl *mainModule = instance.getMainModule();
@@ -210,6 +241,7 @@ swift_toolchain::runAnnotation(const swift_toolchain::AnnotationRequest &request
     json.attribute("schema", 1);
     json.attribute("status", "success");
     json.attribute("module", mainModule->getName().str());
+    json.attribute("checkedSIL", checksSIL);
     json.attributeArray("references", [&] {
       for (const Reference &reference : references.references) {
         json.object([&] {
@@ -238,6 +270,7 @@ swift_toolchain::runAnnotation(const swift_toolchain::AnnotationRequest &request
       json.attribute("setup", setupMilliseconds);
       json.attribute("typeCheck", typeCheckMilliseconds);
       json.attribute("walk", walkMilliseconds);
+      json.attribute("sil", silMilliseconds);
     });
   });
   stream.flush();
