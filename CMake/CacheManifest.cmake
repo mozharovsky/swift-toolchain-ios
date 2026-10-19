@@ -6,6 +6,7 @@ function(toolchain_native_identity output)
   set(paths CMake/Inputs.cmake Toolchain.lock.json Patches/DisableImmediateExecution.patch
     Patches/AppleFileSystemMetadata.patch CMake/IncludeAppleFileSystemMetadata.cmake
     Patches/RestrictedSwiftNativeProfile.patch Patches/RestrictedLLVMNativeProfile.patch
+    Patches/WebAssemblyMultiDefStackify.patch
     CMake/Profiles/RestrictedNative.cmake
     Sources/NativeProfile/BundledPluginPolicy.cpp Sources/NativeProfile/BundledPluginPolicy.h
     Sources/NativeProfile/SwiftToolchainPluginPolicy.h Sources/NativeProfile/module.modulemap

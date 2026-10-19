@@ -28,6 +28,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let restrictedLLVMPatchSHA256: String?
     /// The bundled macro policy identity, present with the complete native profile record.
     package let bundledMacroPatchSHA256: String?
+    /// The WebAssembly stackification fix identity, absent from releases before the backport.
+    ///
+    /// Compilers with this patch keep both results of a multivalue instruction in locals, which
+    /// makes `-mwide-arithmetic` overflow checks correct. Consumers can require it before they
+    /// enable that target feature.
+    package let webAssemblyStackifyPatchSHA256: String?
     /// The macro adapter preserves the upstream main-actor callback requirement.
     package let macroPatchSHA256: String
     /// Source publication can pin the packaging code independently of upstream compiler revisions.
@@ -118,6 +124,9 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         }
         if let filesystemMetadataPatchSHA256 {
             try CompilerArtifact.validateChecksum(filesystemMetadataPatchSHA256)
+        }
+        if let webAssemblyStackifyPatchSHA256 {
+            try CompilerArtifact.validateChecksum(webAssemblyStackifyPatchSHA256)
         }
         try guestBuiltins?.validate(inputs: inputs)
         let profileIdentities = [

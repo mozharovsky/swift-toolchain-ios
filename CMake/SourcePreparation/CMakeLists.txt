@@ -13,7 +13,9 @@ elseif(TOOLCHAIN_SOURCE_NAME STREQUAL "llvm-project")
   set(patch_command "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
     "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/AppleFileSystemMetadata.patch"
     COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
-    "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch")
+    "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch"
+    COMMAND "${TOOLCHAIN_PATCH}" -p1 --forward --fuzz=0 --input
+    "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/WebAssemblyMultiDefStackify.patch")
 endif()
 ExternalProject_Add(prepare-source
   SOURCE_DIR "${TOOLCHAIN_SOURCE_DIRECTORY}"

@@ -117,7 +117,7 @@ function(toolchain_build_guest_builtins archive compiler work)
   endif()
   # The manifest names the upstream revision, which stays accurate only while no patch edits
   # compiler-rt.
-  foreach(patch AppleFileSystemMetadata RestrictedLLVMNativeProfile)
+  foreach(patch AppleFileSystemMetadata RestrictedLLVMNativeProfile WebAssemblyMultiDefStackify)
     file(STRINGS "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/${patch}.patch" patched_builtins
       REGEX "^\\+\\+\\+ b/${TOOLCHAIN_GUEST_BUILTINS_SOURCE}/")
     if(patched_builtins)

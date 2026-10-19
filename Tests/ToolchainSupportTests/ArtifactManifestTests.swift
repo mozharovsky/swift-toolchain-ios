@@ -66,6 +66,28 @@ struct ArtifactManifestTests {
         try manifest.validate()
     }
 
+    /// Reads releases that predate the stackification backport without claiming the fix, so
+    /// consumers can tell which compilers support `-mwide-arithmetic`.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyStackifyPatch() throws {
+        let manifest = try Self.modified { object in
+            object.removeValue(forKey: "webAssemblyStackifyPatchSHA256")
+        }
+        #expect(manifest.webAssemblyStackifyPatchSHA256 == nil)
+        try manifest.validate()
+    }
+
+    /// Rejects a stackification patch identity that is not a complete SHA-256 digest.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test func rejectsInvalidStackifyPatchDigest() throws {
+        let manifest = try Self.modified { object in
+            object["webAssemblyStackifyPatchSHA256"] = String(repeating: "g", count: 64)
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// A present filesystem patch identity must use the same checksum format as other inputs.
     @Test func rejectsInvalidFilesystemMetadataDigest() throws {
         let manifest = try Self.modified { object in
@@ -163,6 +185,9 @@ struct ArtifactManifestTests {
         #expect(restored.restrictedSwiftPatchSHA256 == original.restrictedSwiftPatchSHA256)
         #expect(restored.restrictedLLVMPatchSHA256 == original.restrictedLLVMPatchSHA256)
         #expect(restored.bundledMacroPatchSHA256 == original.bundledMacroPatchSHA256)
+        #expect(
+            restored.webAssemblyStackifyPatchSHA256 == original.webAssemblyStackifyPatchSHA256,
+        )
     }
 
     /// Development inputs must not select another archive or omit its transfer and integrity
@@ -352,6 +377,7 @@ struct ArtifactManifestTests {
             restrictedSwiftPatchSHA256: String(repeating: "d", count: 64),
             restrictedLLVMPatchSHA256: String(repeating: "e", count: 64),
             bundledMacroPatchSHA256: String(repeating: "f", count: 64),
+            webAssemblyStackifyPatchSHA256: String(repeating: "a", count: 64),
             macroPatchSHA256: String(repeating: "c", count: 64),
             producerRevision: String(repeating: "a", count: 40),
             producerHasUncommittedChanges: false,
