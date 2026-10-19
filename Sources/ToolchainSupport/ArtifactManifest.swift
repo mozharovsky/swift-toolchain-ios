@@ -78,7 +78,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     ///
     /// A native profile record supplies every restriction patch identity together. Earlier
     /// manifests can omit the complete record without claiming those restrictions. A guest
-    /// builtins record must name the pinned source revision and a compiler built from it.
+    /// builtins record must name compiler-rt at the pinned llvm-project revision, a release build,
+    /// and a compiler built from that revision.
     ///
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.

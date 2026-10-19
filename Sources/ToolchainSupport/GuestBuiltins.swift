@@ -10,13 +10,13 @@ import Foundation
 package struct GuestBuiltins: Codable, Equatable, Sendable {
     /// The archive's location relative to the SDK framework's `Payload` directory.
     package let path: String
-    /// The pinned source component that supplied the compiler-rt sources, such as `llvm-project`.
+    /// The pinned source component that supplied the compiler-rt sources, which is `llvm-project`.
     package let component: String
     /// The component revision, which must equal the revision recorded in the release inputs.
     package let revision: String
-    /// The CMake project directory inside the component, such as `compiler-rt`.
+    /// The CMake project directory inside the component, which is `compiler-rt`.
     package let sourcePath: String
-    /// The CMake build type that selected the optimization level, such as `Release`.
+    /// The CMake build type, which is `Release` because packaging produces only optimized builds.
     package let buildType: String
     /// The first line of the compiling clang's version output, which ends with its LLVM revision.
     package let compiler: String
@@ -27,32 +27,30 @@ package struct GuestBuiltins: Codable, Equatable, Sendable {
     /// The number of global symbols that both the packaged and the replaced archive define.
     package let definedSymbols: Int
 
-    /// Checks that the record names a payload file, a pinned source, and its matching compiler.
+    /// Checks that the record names a payload archive, the pinned compiler-rt sources, a release
+    /// build, and a compiler built from the same revision.
     ///
     /// `verify-artifact-manifest` calls this through ``ArtifactManifest/validate()`` before a
     /// consumer selects a release. Archive bytes are checked separately by artifact verification.
     ///
     /// - Parameter inputs: The release inputs whose source revisions the record must match.
-    /// - Throws: ``ToolchainError`` when a path escapes its directory, the source or compiler does
-    ///   not match the pinned revision, a digest is malformed, or the archive defines no symbols.
+    /// - Throws: ``ToolchainError`` when the path escapes the payload, the record names another
+    ///   source, build type, or compiler revision, a digest is malformed, or the archive defines no
+    ///   symbols.
     package func validate(inputs: ToolchainConfiguration) throws(ToolchainError) {
-        for relativePath in [path, sourcePath] {
-            let components = relativePath.split(separator: "/", omittingEmptySubsequences: false)
-            guard !relativePath.isEmpty, !relativePath.hasPrefix("/"),
-                  !components.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else {
-                throw .invalidArtifact("Record guest builtins paths inside their directories.")
-            }
+        let components = path.split(separator: "/", omittingEmptySubsequences: false)
+        guard !path.hasPrefix("/"), path.hasSuffix(".a"),
+              !components.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }) else {
+            throw .invalidArtifact("Record the guest builtins as a static archive in the payload.")
         }
-        guard path.hasSuffix(".a") else {
-            throw .invalidArtifact("Record the guest builtins as a static archive.")
-        }
-        guard inputs.sources.contains(where: { $0.name == component && $0.revision == revision })
+        guard component == "llvm-project", sourcePath == "compiler-rt",
+              inputs.sources.contains(where: { $0.name == component && $0.revision == revision })
         else {
-            throw .invalidArtifact("Build the guest builtins from a pinned source revision.")
+            throw .invalidArtifact("Build the guest builtins from the pinned compiler-rt sources.")
         }
-        guard !buildType.isEmpty, !compiler.contains(where: \.isNewline),
+        guard buildType == "Release", !compiler.contains(where: \.isNewline),
               compiler.hasSuffix(" \(revision))") else {
-            throw .invalidArtifact("Record a build type and a compiler from the source revision.")
+            throw .invalidArtifact("Record a release build and a compiler from that revision.")
         }
         try CompilerArtifact.validateChecksum(replacedSHA256)
         try CompilerArtifact.validateChecksum(sha256)

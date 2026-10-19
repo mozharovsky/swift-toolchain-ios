@@ -243,8 +243,8 @@ struct ArtifactManifestTests {
     /// - Parameter fault: The invalid builtins metadata applied to the fixture record.
     /// - Throws: Fixture conversion fails.
     @Test(arguments: [
-        "parent", "absolute", "empty", "archive", "source", "component", "revision", "compiler",
-        "buildType", "checksum", "unchanged", "symbols",
+        "parent", "absolute", "empty", "archive", "source", "directory", "component", "revision",
+        "compiler", "buildType", "debug", "checksum", "unchanged", "symbols",
     ])
     func rejectsInvalidGuestBuiltins(_ fault: String) throws {
         let manifest = try Self.modified { object in
@@ -255,10 +255,12 @@ struct ArtifactManifestTests {
             case "empty": record["path"] = "lib//libclang_rt.builtins-wasm32.a"
             case "archive": record["path"] = "lib/libclang_rt.builtins-wasm32.so"
             case "source": record["sourcePath"] = "../compiler-rt"
+            case "directory": record["sourcePath"] = "compiler-rt/lib/builtins"
             case "component": record["component"] = "swift"
             case "revision": record["revision"] = String(repeating: "1", count: 40)
             case "compiler": record["compiler"] = "Apple clang version 21.0.0"
             case "buildType": record["buildType"] = ""
+            case "debug": record["buildType"] = "Debug"
             case "checksum": record["sha256"] = "invalid"
             case "unchanged": record["sha256"] = record["replacedSHA256"]
             default: record["definedSymbols"] = 0
