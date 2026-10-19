@@ -36,6 +36,20 @@ and waiting. Mapped-memory allocation and protection reject executable flags, an
 invalidation becomes a no-op. LLVM can inspect its existing process handle but cannot open
 additional libraries through its generic loader. Host tool builds retain their normal profile.
 
+`WebAssemblyMultiDefStackify.patch` applies to the same pinned LLVM revision. It backports LLVM
+commit `b47267441e513f5d65169933cba48c26eb40b803` from llvm/llvm-project#200429, which fixes
+llvm/llvm-project#199910. The pinned revision can stackify the first result of a WebAssembly
+instruction with several results while an operand of a later instruction moves above it. With the
+wide-arithmetic feature, a checked 64-bit multiplication then compares an original operand with the
+sign of the low half and traps for ordinary products. The backport keeps every result of such an
+instruction in a local.
+
+The patch carries only the upstream change to `WebAssemblyRegStackify.cpp`. The upstream commit also
+updates LLVM's lit tests, which the producer does not run. `Tests/CMakeTests/WebAssemblyStackify.cmake`
+checks the fixed order with an `llc` built from the patched source. The patch participates in the
+source and native-cache identities, and the artifact manifest records it as
+`webAssemblyStackifyPatchSHA256`.
+
 `RestrictedSwiftNativeProfile.patch` applies to the pinned Swift revision. It rejects process
 entry points and executable plugins before resources are created. The frontend accepts explicit
 bundled library paths for its macro implementations and in-process server. Resolved-plugin

@@ -111,6 +111,10 @@ It checks that exported and imported global symbol names remain identical and th
 size does not increase before replacing the staged file. Archive and executable checksums describe
 the resulting binaries. Applications sign their embedded frameworks after packaging.
 
+The manifest records `webAssemblyStackifyPatchSHA256` for the backported WebAssembly
+stackification fix. Manifests from earlier releases omit it. Their compilers can produce wrong
+overflow checks when a program enables the wide-arithmetic target feature.
+
 The native profile records `restrictedSwiftPatchSHA256` and `restrictedLLVMPatchSHA256` with
 `bundledMacroPatchSHA256`. Metadata validation requires the complete group when any member is
 present and checks each digest's syntax. Earlier manifests can omit the group. Native receipts
