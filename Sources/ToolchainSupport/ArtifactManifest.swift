@@ -45,6 +45,11 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Releases before the compiler was recorded omit it. Consumers can compare it when two
     /// releases differ in size or behavior without a source change.
     package let nativeCompiler: String?
+    /// The optimized compiler-rt builtins archive that replaces the SDK's copy in both slices.
+    ///
+    /// Releases before the producer rebuilt these builtins omit the record and ship the SDK's
+    /// unoptimized archive. Consumers can compare its digest with the archive in their payload.
+    package let guestBuiltins: GuestBuiltins?
     /// Complete source and SDK identities remain available after archives leave the build tree.
     package let inputs: ToolchainConfiguration
     /// Native macro build inputs remain outside the application's SwiftPM product.
@@ -72,7 +77,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Validates release identities before a consumer resolves binary targets.
     ///
     /// A native profile record supplies every restriction patch identity together. Earlier
-    /// manifests can omit the complete record without claiming those restrictions.
+    /// manifests can omit the complete record without claiming those restrictions. A guest
+    /// builtins record must name the pinned source revision and a compiler built from it.
     ///
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
@@ -112,6 +118,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         if let filesystemMetadataPatchSHA256 {
             try CompilerArtifact.validateChecksum(filesystemMetadataPatchSHA256)
         }
+        try guestBuiltins?.validate(inputs: inputs)
         let profileIdentities = [
             restrictedSwiftPatchSHA256,
             restrictedLLVMPatchSHA256,

@@ -3,7 +3,8 @@
 The planned producer builds native Swift frontend and LLVM libraries for an arm64 iOS application.
 The WebAssembly backend and LLD produce a statically linked `wasm32-unknown-wasip1` program. The open
 WASM SDK supplies the guest standard library, runtime archives, and supported Foundation components.
-These guest archives are compiler input data. They are not arm64 libraries.
+These guest archives are compiler input data. They are not arm64 libraries. Packaging replaces the
+SDK's unoptimized compiler-rt builtins with a release build of the same pinned sources.
 
 `Toolchain.lock.json` pins source commits and the official SDK archive. The verifier checks source
 and archive
