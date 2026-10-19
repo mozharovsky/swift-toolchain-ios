@@ -142,6 +142,13 @@ if(BUILD_TESTING)
   add_test(NAME ArtifactMetadata
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ArtifactMetadata.cmake")
+  if(TOOLCHAIN_TEST_LLC)
+    add_test(NAME WebAssemblyStackify
+      COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+        "-DTOOLCHAIN_TEST_LLC=${TOOLCHAIN_TEST_LLC}"
+        "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/stackify-tests"
+        -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/WebAssemblyStackify.cmake")
+  endif()
   add_test(NAME GuestBuiltins
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/guest-builtins-tests"

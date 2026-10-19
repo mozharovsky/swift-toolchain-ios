@@ -112,6 +112,25 @@ mise exec -- ctest --test-dir .cache/native-profile-check --output-on-failure
 Run these checks after changing a native profile patch. A configuration or compile failure stops
 the relevant command. A failed runtime expectation produces a failing CTest result.
 
+## WebAssembly code generation check
+
+The stackification backport changes the WebAssembly backend. Its check compiles checked 64-bit
+multiplications with the wide-arithmetic feature and requires each wide multiply to keep both
+results in locals. Set `TOOLCHAIN_BUILD_ROOT` to the native build root that configuration prints.
+Build `llc` in its `host-tools` directory, which compiles the patched LLVM source for the build
+machine. Then run the check with that tool.
+
+```sh
+mise exec -- cmake --build "$TOOLCHAIN_BUILD_ROOT/host-tools" --target llc --parallel 4
+mise exec -- cmake -DTOOLCHAIN_SOURCE_DIR="$PWD" \
+  -DTOOLCHAIN_TEST_LLC="$TOOLCHAIN_BUILD_ROOT/host-tools/bin/llc" \
+  -DTOOLCHAIN_TEST_ROOT="$PWD/.cache/stackify-check" \
+  -P Tests/CMakeTests/WebAssemblyStackify.cmake
+```
+
+An `llc` from the unpatched revision fails this check for the signed multiplication. Configuring
+the repository with `TOOLCHAIN_TEST_LLC` also registers the check as a CTest target.
+
 ## Evidence boundaries
 
 The source target and patch application can be validated without compiling LLVM. Contract tests

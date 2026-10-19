@@ -11,11 +11,14 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedSwiftNativeProfile.p
   restricted_swift_patch_hash)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/RestrictedLLVMNativeProfile.patch"
   restricted_llvm_patch_hash)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/WebAssemblyMultiDefStackify.patch"
+  stackify_patch_hash)
 string(JSON manifest SET "${manifest}" configurationSHA256 "\"${configuration_hash}\"")
 string(JSON manifest SET "${manifest}" frontendPatchSHA256 "\"${patch_hash}\"")
 string(JSON manifest SET "${manifest}" filesystemMetadataPatchSHA256 "\"${metadata_patch_hash}\"")
 string(JSON manifest SET "${manifest}" restrictedSwiftPatchSHA256 "\"${restricted_swift_patch_hash}\"")
 string(JSON manifest SET "${manifest}" restrictedLLVMPatchSHA256 "\"${restricted_llvm_patch_hash}\"")
+string(JSON manifest SET "${manifest}" webAssemblyStackifyPatchSHA256 "\"${stackify_patch_hash}\"")
 # The receipt names the compiler that built the bridge stage, which the artifact manifest repeats.
 if(NOT TOOLCHAIN_NATIVE_COMPILER MATCHES "^AppleClang [0-9]+(\\.[0-9]+)*$")
   message(FATAL_ERROR "The native libraries must be built with the selected Xcode's clang.")
