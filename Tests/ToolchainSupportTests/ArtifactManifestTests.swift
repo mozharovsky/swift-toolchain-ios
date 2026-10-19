@@ -215,6 +215,78 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Reads releases that predate the builtins rebuild, so `verify-artifact-manifest` keeps
+    /// accepting alpha releases that ship the SDK's original archive.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyGuestBuiltins() throws {
+        let manifest = try Self.modified { object in object.removeValue(forKey: "guestBuiltins") }
+        #expect(manifest.guestBuiltins == nil)
+        try manifest.validate()
+    }
+
+    /// Preserves the builtins provenance through the manifest's public Codable contract.
+    ///
+    /// - Throws: Fixture loading, encoding, or decoding fails.
+    @Test func preservesGuestBuiltins() throws {
+        let original = try Self.fixture()
+        let restored = try JSONDecoder().decode(
+            ArtifactManifest.self, from: JSONEncoder().encode(original),
+        )
+        #expect(restored.guestBuiltins == original.guestBuiltins)
+        #expect(restored.guestBuiltins?.definedSymbols == 218)
+    }
+
+    /// Rejects a builtins record that escapes the payload, names another source or compiler, or
+    /// claims an unchanged or empty archive.
+    ///
+    /// - Parameter fault: The invalid builtins metadata applied to the fixture record.
+    /// - Throws: Fixture conversion fails.
+    @Test(arguments: [
+        "parent", "absolute", "empty", "archive", "source", "directory", "component", "revision",
+        "compiler", "buildType", "debug", "checksum", "unchanged", "symbols",
+    ])
+    func rejectsInvalidGuestBuiltins(_ fault: String) throws {
+        let manifest = try Self.modified { object in
+            var record = try #require(object["guestBuiltins"] as? [String: Any])
+            switch fault {
+            case "parent": record["path"] = "../libclang_rt.builtins-wasm32.a"
+            case "absolute": record["path"] = "/tmp/libclang_rt.builtins-wasm32.a"
+            case "empty": record["path"] = "lib//libclang_rt.builtins-wasm32.a"
+            case "archive": record["path"] = "lib/libclang_rt.builtins-wasm32.so"
+            case "source": record["sourcePath"] = "../compiler-rt"
+            case "directory": record["sourcePath"] = "compiler-rt/lib/builtins"
+            case "component": record["component"] = "swift"
+            case "revision": record["revision"] = String(repeating: "1", count: 40)
+            case "compiler": record["compiler"] = "Apple clang version 21.0.0"
+            case "buildType": record["buildType"] = ""
+            case "debug": record["buildType"] = "Debug"
+            case "checksum": record["sha256"] = "invalid"
+            case "unchanged": record["sha256"] = record["replacedSHA256"]
+            default: record["definedSymbols"] = 0
+            }
+            object["guestBuiltins"] = record
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Builds a builtins record whose source and compiler match the pinned LLVM revision.
+    ///
+    /// - Parameter revision: The pinned llvm-project revision from the lock file.
+    /// - Returns: A valid record with placeholder digests.
+    private static func guestBuiltins(revision: String) -> GuestBuiltins {
+        GuestBuiltins(
+            path: "swift.xctoolchain/usr/lib/swift_static/clang/lib/wasip1/"
+                + "libclang_rt.builtins-wasm32.a",
+            component: "llvm-project", revision: revision, sourcePath: "compiler-rt",
+            buildType: "Release",
+            compiler: "Apple clang version 21.0.0 "
+                + "(https://github.com/swiftlang/llvm-project.git \(revision))",
+            replacedSHA256: String(repeating: "a", count: 64),
+            sha256: String(repeating: "b", count: 64), definedSymbols: 218,
+        )
+    }
+
     /// Builds schema 2 data through the same JSON boundary used by release consumers.
     ///
     /// - Parameter edit: An optional mutation applied after converting every framework.
@@ -262,6 +334,7 @@ struct ArtifactManifestTests {
             .deletingLastPathComponent().deletingLastPathComponent()
         let inputs = try ToolchainConfiguration
             .load(from: root.appending(path: "Toolchain.lock.json"))
+        let llvmRevision = try #require(inputs.sources.first { $0.name == "llvm-project" }).revision
         let names = [
             "SwiftCompilerBridge",
             "SwiftCompilerSDK",
@@ -285,7 +358,8 @@ struct ArtifactManifestTests {
             noticesSHA256: String(repeating: "b", count: 64), macroAdapterSHA256: String(
                 repeating: "c",
                 count: 64,
-            ), nativeCompiler: "AppleClang 21.0.0.21000123", inputs: inputs,
+            ), nativeCompiler: "AppleClang 21.0.0.21000123",
+            guestBuiltins: guestBuiltins(revision: llvmRevision), inputs: inputs,
             macroBuildSupport: MacroBuildSupport(
                 archive: "MacroBuildSupport.zip",
                 checksum: String(repeating: "f", count: 64),

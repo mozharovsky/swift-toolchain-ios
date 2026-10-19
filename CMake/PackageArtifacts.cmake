@@ -19,6 +19,10 @@ endif()
 set(device_macro_output "${TOOLCHAIN_MACRO_OUTPUT}")
 file(MAKE_DIRECTORY "${TOOLCHAIN_ARTIFACT_OUTPUT}/XCFrameworks"
   "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives")
+# Both SDK slices receive the same rebuilt builtins, so packaging compiles them once.
+include("${CMAKE_CURRENT_LIST_DIR}/GuestBuiltins.cmake")
+toolchain_build_guest_builtins(TOOLCHAIN_GUEST_BUILTINS guest_builtins_compiler
+  "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work/GuestBuiltins")
 
 # Each platform verifies its own native receipt before its libraries enter an XCFramework.
 function(toolchain_prepare_platform platform macro_output)
@@ -27,6 +31,8 @@ function(toolchain_prepare_platform platform macro_output)
   include("${CMAKE_CURRENT_LIST_DIR}/PrepareNativeFrameworks.cmake")
   set(${platform}_names "${names}" PARENT_SCOPE)
   set(${platform}_compiler "${TOOLCHAIN_NATIVE_COMPILER}" PARENT_SCOPE)
+  set(${platform}_replaced_builtins "${TOOLCHAIN_REPLACED_BUILTINS_SHA256}" PARENT_SCOPE)
+  set(${platform}_builtin_symbols "${TOOLCHAIN_GUEST_BUILTIN_SYMBOLS}" PARENT_SCOPE)
 endfunction()
 toolchain_prepare_platform(device "${device_macro_output}")
 toolchain_prepare_platform(simulator "${TOOLCHAIN_SIMULATOR_MACRO_OUTPUT}")
@@ -36,6 +42,12 @@ endif()
 if(NOT device_compiler STREQUAL simulator_compiler)
   message(FATAL_ERROR "Device and simulator libraries must come from the same native compiler.")
 endif()
+if(NOT device_replaced_builtins STREQUAL simulator_replaced_builtins
+    OR NOT device_builtin_symbols STREQUAL simulator_builtin_symbols)
+  message(FATAL_ERROR "Device and simulator SDK slices must replace the same builtins archive.")
+endif()
+toolchain_guest_builtins_record(guest_builtins_record "${TOOLCHAIN_GUEST_BUILTINS}"
+  "${guest_builtins_compiler}" "${device_replaced_builtins}" "${device_builtin_symbols}")
 set(names "${device_names}")
 set(macro_sdk "${TOOLCHAIN_ARTIFACT_OUTPUT}/Development/MacroBuildSupport")
 set(macro_sdk_archive "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives/MacroBuildSupport.zip")
@@ -124,6 +136,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"noticesSHA256\": \"${notices_checksum}\",\n"
   "  \"macroAdapterSHA256\": \"${adapter_checksum}\",\n"
   "  \"nativeCompiler\": \"${device_compiler}\",\n"
+  "  \"guestBuiltins\": ${guest_builtins_record},\n"
   "  \"macroBuildSupport\": ${macro_sdk_record},\n  \"inputs\": ${TOOLCHAIN_INPUTS},\n  \"artifacts\": ${artifacts}\n}\n")
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/Package.swift"
   "// swift-tools-version: 6.3\nimport PackageDescription\n\n"

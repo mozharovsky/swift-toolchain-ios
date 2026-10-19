@@ -28,6 +28,12 @@ file(MAKE_DIRECTORY "${framework}/Headers" "${payload}/swift.xctoolchain/usr/lib
 file(COPY "${sdk_source}/WASI.sdk" DESTINATION "${payload}" PATTERN ".DS_Store" EXCLUDE)
 file(COPY "${sdk_source}/${resources_path}" DESTINATION "${payload}/swift.xctoolchain/usr/lib"
   PATTERN ".DS_Store" EXCLUDE)
+include("${CMAKE_CURRENT_LIST_DIR}/GuestBuiltins.cmake")
+if(NOT DEFINED TOOLCHAIN_GUEST_BUILTINS)
+  message(FATAL_ERROR "Build the guest builtins before preparing the SDK.")
+endif()
+toolchain_install_guest_builtins(TOOLCHAIN_REPLACED_BUILTINS_SHA256 TOOLCHAIN_GUEST_BUILTIN_SYMBOLS
+  "${payload}" "${TOOLCHAIN_GUEST_BUILTINS}")
 file(WRITE "${payload}/Compatibility.json"
   "{\n  \"schemaVersion\": 1,\n  \"swiftVersion\": \"${TOOLCHAIN_SWIFT_VERSION}\",\n"
   "  \"compilerCommit\": \"${TOOLCHAIN_swift_REVISION}\",\n"

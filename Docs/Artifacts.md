@@ -70,6 +70,31 @@ XCFramework identifier, native compiler triple, executable checksum, and executa
 metadata remains readable for existing device-only releases. The toolchain input lock and notice
 index have independent schemas.
 
+## Guest builtins
+
+Swift's WASM SDK build configures the compiler-rt builtins without a CMake build type, so the SDK's
+`libclang_rt.builtins-wasm32.a` is compiled without optimization. Guest programs call these
+builtins for checked 64-bit multiplication, 128-bit integer division, the `long double` arithmetic
+in `printf`, and other operations that WebAssembly lacks as instructions.
+
+Packaging rebuilds that archive once from `compiler-rt` in the prepared llvm-project source. The
+build keeps the upstream WASI options and adds the `Release` build type, which compiles with `-O3`.
+It uses the bootstrap release's clang, whose version line must name the pinned llvm-project
+revision. Packaging rejects LLVM patches that change compiler-rt, so the sources match that
+revision. A source prefix map keeps the checkout path out of the archive's abort messages. The same
+inputs therefore produce identical archive bytes. The build compiles about 150 small C files.
+
+Each SDK slice replaces its archive only after a comparison with the bootstrap's LLVM tools. Both
+archives must contain the same members and define the same global symbols with the same binding.
+The rebuilt archive may drop external references but must not add any. The WASI target, the
+archive's location in the payload, and the bridge ABI stay unchanged.
+
+The manifest's `guestBuiltins` record names the payload path, the source revision, the build type,
+and the compiler. It also records the replaced archive's digest, the packaged archive's digest, and
+the number of defined symbols. Archive verification checks that digest and count in both SDK
+slices. Manifests from earlier releases omit the record and ship the SDK's original archive. The
+artifact schema version remains 2.
+
 ## Layout and validation
 
 `Frameworks` separates device and simulator frameworks under their XCFramework slice identifiers.
