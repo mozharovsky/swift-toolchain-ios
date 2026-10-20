@@ -62,6 +62,7 @@ struct ArtifactManifestTests {
     /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
     @Test func acceptsLegacyFoundationMacros() throws {
         let manifest = try Self.modified { object in
+            object.removeValue(forKey: "predicateStringComparisonsPatchSHA256")
             var inputs = try #require(object["inputs"] as? [String: Any])
             let sources = try #require(inputs["sources"] as? [[String: Any]])
             inputs["sources"] = sources.filter { $0["name"] as? String != "swift-foundation" }
@@ -109,6 +110,40 @@ struct ArtifactManifestTests {
     @Test func rejectsInvalidStackifyPatchDigest() throws {
         let manifest = try Self.modified { object in
             object["webAssemblyStackifyPatchSHA256"] = String(repeating: "g", count: 64)
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Reads releases without the predicate string comparison patch.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyPredicatePatch() throws {
+        let manifest = try Self.modified { object in
+            object.removeValue(forKey: "predicateStringComparisonsPatchSHA256")
+        }
+        #expect(manifest.predicateStringComparisonsPatchSHA256 == nil)
+        try manifest.validate()
+    }
+
+    /// Rejects a predicate patch identity that is not a SHA-256 digest or that describes a release
+    /// without the Foundation macros.
+    ///
+    /// - Parameter fault: The digest or framework inventory change applied to the fixture.
+    /// - Throws: Fixture loading or JSON conversion fails.
+    @Test(arguments: ["digest", "framework"])
+    func rejectsInvalidPredicatePatch(_ fault: String) throws {
+        let manifest = try Self.modified { object in
+            if fault == "digest" {
+                object["predicateStringComparisonsPatchSHA256"] = "invalid"
+            } else {
+                var inputs = try #require(object["inputs"] as? [String: Any])
+                let sources = try #require(inputs["sources"] as? [[String: Any]])
+                inputs["sources"] = sources.filter { $0["name"] as? String != "swift-foundation" }
+                object["inputs"] = inputs
+                let artifacts = try #require(object["artifacts"] as? [[String: Any]])
+                object["artifacts"] = artifacts
+                    .filter { $0["name"] as? String != "FoundationMacros" }
+            }
         }
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
@@ -405,6 +440,7 @@ struct ArtifactManifestTests {
             bundledMacroPatchSHA256: String(repeating: "f", count: 64),
             webAssemblyStackifyPatchSHA256: String(repeating: "a", count: 64),
             macroPatchSHA256: String(repeating: "c", count: 64),
+            predicateStringComparisonsPatchSHA256: String(repeating: "d", count: 64),
             producerRevision: String(repeating: "a", count: 40),
             producerHasUncommittedChanges: false,
             noticesSHA256: String(repeating: "b", count: 64), macroAdapterSHA256: String(

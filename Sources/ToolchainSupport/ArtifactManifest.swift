@@ -36,6 +36,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     package let webAssemblyStackifyPatchSHA256: String?
     /// The macro adapter preserves the upstream main-actor callback requirement.
     package let macroPatchSHA256: String
+    /// The predicate string comparison patch identity, absent from releases without it.
+    ///
+    /// Foundation macros with this patch accept `localizedStandardContains(_:)`,
+    /// `localizedCompare(_:)`, and `caseInsensitiveCompare(_:)` in predicates. Their expansions
+    /// call builders that a library imported by the program must declare.
+    package let predicateStringComparisonsPatchSHA256: String?
     /// Source publication can pin the packaging code independently of upstream compiler revisions.
     package let producerRevision: String
     /// Local candidates remain distinguishable from artifacts assembled from committed producer
@@ -88,7 +94,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// and a compiler built from that revision.
     ///
     /// A release whose inputs pin swift-foundation must contain the `FoundationMacros` framework.
-    /// Earlier releases pin no such source and omit the framework.
+    /// Earlier releases pin no such source and omit the framework. A predicate patch identity
+    /// requires that framework.
     ///
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
@@ -131,6 +138,9 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         if let webAssemblyStackifyPatchSHA256 {
             try CompilerArtifact.validateChecksum(webAssemblyStackifyPatchSHA256)
         }
+        if let predicateStringComparisonsPatchSHA256 {
+            try CompilerArtifact.validateChecksum(predicateStringComparisonsPatchSHA256)
+        }
         try guestBuiltins?.validate(inputs: inputs)
         let profileIdentities = [
             restrictedSwiftPatchSHA256,
@@ -166,6 +176,10 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
         let pinsFoundation = inputs.sources.contains { $0.name == "swift-foundation" }
         guard !pinsFoundation || names.contains("FoundationMacros") else {
             throw .invalidArtifact("Include the Foundation macros built from swift-foundation.")
+        }
+        guard predicateStringComparisonsPatchSHA256 == nil || names.contains("FoundationMacros")
+        else {
+            throw .invalidArtifact("Record the predicate patch only with the Foundation macros.")
         }
         for artifact in artifacts {
             try artifact.validate()

@@ -78,6 +78,9 @@ foreach(source IN LISTS foundation_sources)
   configure_file("${TOOLCHAIN_FOUNDATION_SOURCE}/Sources/FoundationMacros/${filename}"
     "${TOOLCHAIN_MACRO_OUTPUT}/${source}" COPYONLY)
 endforeach()
+execute_process(COMMAND patch -p1 --forward --fuzz=0 --input
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch"
+  WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source/FoundationMacros" COMMAND_ERROR_IS_FATAL ANY)
 
 foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros
     FoundationMacros)
@@ -112,8 +115,9 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" ad
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/FoundationMacros.cmake" foundation_recipe)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch" predicate_patch)
 string(SHA256 macro_identity
-  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}")
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}${predicate_patch}")
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib libFoundationMacros.dylib ${foundation_sources})
 toolchain_record_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"

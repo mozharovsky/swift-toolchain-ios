@@ -28,8 +28,14 @@ executable entry point, as in the plugin that Swift's Linux toolchains install. 
 swift-foundation's Swift 5 language mode and feature flags, so upstream warnings remain warnings.
 
 Expansions follow the open-source configuration. They name `FoundationEssentials`, which the WASM
-SDK provides, instead of Apple's `Foundation`. The macro rejects the localized string comparisons
-that only Apple's Foundation implements.
+SDK provides, instead of Apple's `Foundation`.
+
+`PredicateStringComparisons.patch` adds the string comparisons that Apple's predicate macro
+accepts. These are `localizedStandardContains(_:)`, `localizedCompare(_:)`, and
+`caseInsensitiveCompare(_:)`. Open-source Foundation has no expressions for them, so their
+expansions call unqualified builders. A program that uses them must import a library that declares
+these `PredicateExpressions` builders. The manifest records the patch as
+`predicateStringComparisonsPatchSHA256`, and earlier releases omit the field.
 
 Each slice of `MacroBuildSupport` carries the compiled sources in `Sources/FoundationMacros`.
 Desktop tools that compile the same programs with the standalone release can build the plugin for

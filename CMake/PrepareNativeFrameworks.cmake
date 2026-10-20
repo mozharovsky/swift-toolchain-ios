@@ -12,8 +12,9 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" ad
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/FoundationMacros.cmake" foundation_recipe)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch" predicate_patch)
 string(SHA256 macro_identity
-  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}")
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}${predicate_patch}")
 toolchain_foundation_macro_sources(foundation_sources)
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
   libObservationMacros.dylib libSwiftMacros.dylib libFoundationMacros.dylib ${foundation_sources})

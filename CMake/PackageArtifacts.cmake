@@ -120,6 +120,8 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Licenses/SDKNotices.json" notices_chec
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter_checksum)
 file(SHA256 "${TOOLCHAIN_LOCK_FILE}" lock_checksum)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/MainActorMacroEntry.patch" macro_patch_checksum)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch"
+  predicate_patch_checksum)
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "{\n  \"schemaVersion\": 2,\n  \"version\": \"${TOOLCHAIN_ARTIFACT_VERSION}\",\n"
   "  \"bridgeABI\": ${bridge_abi},\n  \"compilerHost\": \"${TOOLCHAIN_COMPILER_HOST}\",\n"
@@ -132,6 +134,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"webAssemblyStackifyPatchSHA256\": \"${TOOLCHAIN_STACKIFY_PATCH_SHA256}\",\n"
   "  \"bundledMacroPatchSHA256\": \"${bundled_macro_patch}\",\n"
   "  \"macroPatchSHA256\": \"${macro_patch_checksum}\",\n"
+  "  \"predicateStringComparisonsPatchSHA256\": \"${predicate_patch_checksum}\",\n"
   "  \"producerRevision\": \"${producer_revision}\",\n"
   "  \"producerHasUncommittedChanges\": ${producer_dirty},\n"
   "  \"noticesSHA256\": \"${notices_checksum}\",\n"
