@@ -87,6 +87,9 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// builtins record must name compiler-rt at the pinned llvm-project revision, a release build,
     /// and a compiler built from that revision.
     ///
+    /// A release whose inputs pin swift-foundation must contain the `FoundationMacros` framework.
+    /// Earlier releases pin no such source and omit the framework.
+    ///
     /// - Throws: ``ToolchainError`` when required components are missing, identities are invalid,
     ///   or schema and platform metadata is inconsistent.
     package func validate() throws(ToolchainError) {
@@ -158,6 +161,11 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
             throw .invalidArtifact(
                 "Include the compiler, SDK, macro server, and standard macro libraries.",
             )
+        }
+        // Releases before the Foundation macros neither pin swift-foundation nor ship the plugin.
+        let pinsFoundation = inputs.sources.contains { $0.name == "swift-foundation" }
+        guard !pinsFoundation || names.contains("FoundationMacros") else {
+            throw .invalidArtifact("Include the Foundation macros built from swift-foundation.")
         }
         for artifact in artifacts {
             try artifact.validate()

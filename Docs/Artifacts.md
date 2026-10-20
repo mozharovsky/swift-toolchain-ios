@@ -1,8 +1,8 @@
 # Consumer artifacts
 
-The producer packages its native compiler libraries, shared macro infrastructure, standard Swift
-and Observation macros, and the open WASM SDK. Applications keep their project sources, execution
-engines, and application-specific guest modules in their own packages.
+The producer packages its native compiler libraries, shared macro infrastructure, standard Swift,
+Observation, and Foundation macros, and the open WASM SDK. Applications keep their project sources,
+execution engines, and application-specific guest modules in their own packages.
 
 `BuildMacros.cmake` reuses the compiler's existing SwiftSyntax modules. Those modules preserve their
 source import names and carry distinct compiler ABI and linker names. The macro libraries therefore
@@ -15,6 +15,25 @@ work. The adapter does not add process isolation or recover from native macro cr
 The library-plugin provider links the compiler bridge's bundled-path validator. Both native
 loaders open the canonical path returned by that shared policy. Macro implementations and the
 in-process server use the flat framework layout described in [Compiler bridge](CompilerBridge.md).
+
+## Foundation macros
+
+`BuildMacros.cmake` also builds `FoundationMacros` from the swift-foundation commit tagged
+`swift-6.4.0-RELEASE`, the release that produced the pinned SDK. The library implements
+`#Predicate`, `#Expression`, and `#bundle`, which swift-foundation declares as external macros of
+the `FoundationMacros` module. The standalone Swift release for macOS does not include this plugin.
+
+The build compiles the upstream sources with `FOUNDATION_MACROS_LIBRARY`, which removes their
+executable entry point, as in the plugin that Swift's Linux toolchains install. It keeps
+swift-foundation's Swift 5 language mode and feature flags, so upstream warnings remain warnings.
+
+Expansions follow the open-source configuration. They name `FoundationEssentials`, which the WASM
+SDK provides, instead of Apple's `Foundation`. The macro rejects the localized string comparisons
+that only Apple's Foundation implements.
+
+Each slice of `MacroBuildSupport` carries the compiled sources in `Sources/FoundationMacros`.
+Desktop tools that compile the same programs with the standalone release can build the plugin for
+their own host from these files.
 
 ## Preparation
 
@@ -122,7 +141,8 @@ also bind the profile source and configuration so packaging cannot reuse a broad
 
 `Development/MacroBuildSupport` separates native SwiftSyntax modules and matching support libraries
 under `ios-arm64` and `ios-arm64-simulator`. Each directory includes compatibility metadata and open
-C-shim headers for building additional bundled macro implementations. Its ZIP
+C-shim headers for building additional bundled macro implementations. It also includes the
+Foundation macro sources, which archive verification requires to match in both directories. Its ZIP
 has a separate manifest record and is not part of the app's SwiftPM product. This lets a consumer
 update its own native macro library without rebuilding the compiler or shipping build-only inputs
 in the application.

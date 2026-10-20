@@ -1,4 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactInputs.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/FoundationMacros.cmake")
 set(TOOLCHAIN_FRAMEWORK_ROOT "${TOOLCHAIN_ARTIFACT_OUTPUT}/Frameworks/${TOOLCHAIN_SLICE}")
 set(TOOLCHAIN_PACKAGE_WORK "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work/${TOOLCHAIN_SLICE}")
 file(MAKE_DIRECTORY "${TOOLCHAIN_FRAMEWORK_ROOT}" "${TOOLCHAIN_PACKAGE_WORK}")
@@ -10,10 +11,12 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch" b
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/FoundationMacros.cmake" foundation_recipe)
 string(SHA256 macro_identity
-  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}")
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}")
+toolchain_foundation_macro_sources(foundation_sources)
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
-  libObservationMacros.dylib libSwiftMacros.dylib)
+  libObservationMacros.dylib libSwiftMacros.dylib libFoundationMacros.dylib ${foundation_sources})
 toolchain_verify_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
   "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})
 set(libraries "")
@@ -24,7 +27,8 @@ foreach(input IN LISTS native_files)
 endforeach()
 list(SORT libraries)
 list(PREPEND libraries "${TOOLCHAIN_SWIFT_BUILD}/lib/libSwiftCompilerBridge.dylib")
-foreach(name _CompilerSwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
+foreach(name _CompilerSwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros
+    FoundationMacros)
   list(APPEND libraries "${TOOLCHAIN_MACRO_OUTPUT}/lib${name}.dylib")
 endforeach()
 set(names "")

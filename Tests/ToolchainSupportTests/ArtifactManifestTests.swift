@@ -48,6 +48,31 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// A release that pins swift-foundation cannot omit the Foundation macros built from it.
+    @Test func rejectsMissingFoundationMacros() throws {
+        let manifest = try Self.modified { object in
+            let artifacts = try #require(object["artifacts"] as? [[String: Any]])
+            object["artifacts"] = artifacts.filter { $0["name"] as? String != "FoundationMacros" }
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
+    /// Releases before the Foundation macros remain valid because their inputs omit the source.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyFoundationMacros() throws {
+        let manifest = try Self.modified { object in
+            var inputs = try #require(object["inputs"] as? [String: Any])
+            let sources = try #require(inputs["sources"] as? [[String: Any]])
+            inputs["sources"] = sources.filter { $0["name"] as? String != "swift-foundation" }
+            object["inputs"] = inputs
+            let artifacts = try #require(object["artifacts"] as? [[String: Any]])
+            object["artifacts"] = artifacts.filter { $0["name"] as? String != "FoundationMacros" }
+        }
+        #expect(!manifest.artifacts.contains { $0.name == "FoundationMacros" })
+        try manifest.validate()
+    }
+
     /// Digests with the right length still fail when they contain non-hexadecimal bytes.
     @Test func rejectsInvalidDigest() throws {
         let manifest = try Self.modified { object in object["macroPatchSHA256"] = String(
@@ -367,6 +392,7 @@ struct ArtifactManifestTests {
             "_CompilerSwiftLibraryPluginProvider",
             "ObservationMacros",
             "SwiftMacros",
+            "FoundationMacros",
         ]
         return ArtifactManifest(
             schemaVersion: 1, version: "0.1.0", bridgeABI: 1,
