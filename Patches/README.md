@@ -63,7 +63,19 @@ producer's shared bundled-plugin validator.
 and opens its returned canonical path. This keeps plugin messages subject to the compiler's path
 policy. The provider also handles an absent loader-error string without a forced unwrap.
 
+`PredicateStringComparisons.patch` applies to swift-foundation commit
+`3b9d8f42b7923a7c1ae9ce20f3b05d1facac334e`. Macro preparation applies it to a copied
+`PredicateMacro.swift` file. Apple's predicate macro accepts `localizedStandardContains(_:)`,
+`localizedCompare(_:)`, and `caseInsensitiveCompare(_:)`, and the open-source configuration rejects
+them. Open-source Foundation has no expression types for these comparisons.
+
+The patch accepts the three calls in the open-source configuration and keeps Apple's suggestions
+for related calls. Their expansions call unqualified `PredicateExpressions` builders, while other
+builders keep the `FoundationEssentials` qualifier. A library that the program imports can declare
+those builders with the expression types of Apple's Foundation. Without such a library, type
+checking reports the missing builder.
+
 Both native restriction patches participate in source and native-cache identities. The bundled
-macro patch participates in the macro cache identity. Archive validation checks the resulting
+macro and predicate patches participate in the macro cache identity. Archive validation checks the resulting
 native imports independently of these source records. Runtime profile tests use the patched
 upstream implementations, and bundled-path tests cover symlink redirection and return ownership.

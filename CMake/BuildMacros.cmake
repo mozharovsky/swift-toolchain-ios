@@ -1,5 +1,6 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactInputs.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/FoundationMacros.cmake")
 if(NOT DEFINED TOOLCHAIN_MACRO_OUTPUT OR NOT IS_ABSOLUTE "${TOOLCHAIN_MACRO_OUTPUT}")
   message(FATAL_ERROR "Set TOOLCHAIN_MACRO_OUTPUT to an absolute ignored output directory.")
 endif()
@@ -31,8 +32,7 @@ foreach(module IN LISTS syntax_modules)
 endforeach()
 set(compiler "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swiftc")
 set(common -emit-library -emit-module -parse-as-library -O -whole-module-optimization
-  -num-threads 1 -swift-version 6 -strict-concurrency=complete -warnings-as-errors
-  -target "${TOOLCHAIN_COMPILER_HOST}" -sdk "${sdk}"
+  -num-threads 1 -target "${TOOLCHAIN_COMPILER_HOST}" -sdk "${sdk}"
   -module-cache-path "${TOOLCHAIN_MACRO_OUTPUT}/ModuleCache"
   -file-prefix-map "${TOOLCHAIN_SOURCE_ROOT}=/toolchain/sources"
   -file-prefix-map "${TOOLCHAIN_MACRO_OUTPUT}=/toolchain/macros"
@@ -64,9 +64,29 @@ execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" clang++ -std=c++17 
   -c "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp"
   -o "${TOOLCHAIN_MACRO_OUTPUT}/MacroEntry.o" COMMAND_ERROR_IS_FATAL ANY)
 
-foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros)
+# swift-foundation builds its macros in the Swift 5 language mode with these upcoming features, so
+# its upstream warnings stay warnings. The library definition omits the executable entry point, as
+# in the plugin that Swift's Linux toolchains install.
+set(foundation_language -swift-version 5 -D FOUNDATION_MACROS_LIBRARY
+  -enable-experimental-feature AccessLevelOnImport -enable-experimental-feature StrictConcurrency
+  -enable-upcoming-feature InferSendableFromCaptures
+  -enable-upcoming-feature MemberImportVisibility)
+# Packaging ships these copies with the build support, so desktop tools compile the same sources.
+toolchain_foundation_macro_sources(foundation_sources)
+foreach(source IN LISTS foundation_sources)
+  get_filename_component(filename "${source}" NAME)
+  configure_file("${TOOLCHAIN_FOUNDATION_SOURCE}/Sources/FoundationMacros/${filename}"
+    "${TOOLCHAIN_MACRO_OUTPUT}/${source}" COPYONLY)
+endforeach()
+execute_process(COMMAND patch -p1 --forward --fuzz=0 --input
+  "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch"
+  WORKING_DIRECTORY "${TOOLCHAIN_MACRO_OUTPUT}/Source/FoundationMacros" COMMAND_ERROR_IS_FATAL ANY)
+
+foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacros SwiftMacros
+    FoundationMacros)
   set(link_name "${name}")
   set(extra_links "")
+  set(language -swift-version 6 -strict-concurrency=complete -warnings-as-errors)
   if(name STREQUAL "SwiftLibraryPluginProvider")
     set(link_name _CompilerSwiftLibraryPluginProvider)
   endif()
@@ -76,11 +96,14 @@ foreach(name SwiftLibraryPluginProvider SwiftInProcPluginServer ObservationMacro
   elseif(name STREQUAL "SwiftInProcPluginServer")
     set(sources "${TOOLCHAIN_MACRO_OUTPUT}/Source/InProcPluginServer.swift"
       "${TOOLCHAIN_MACRO_OUTPUT}/MacroEntry.o")
+  elseif(name STREQUAL "FoundationMacros")
+    list(TRANSFORM foundation_sources PREPEND "${TOOLCHAIN_MACRO_OUTPUT}/" OUTPUT_VARIABLE sources)
+    set(language ${foundation_language})
   else()
     file(GLOB sources "${TOOLCHAIN_SWIFT_SOURCE}/lib/Macros/Sources/${name}/*.swift")
   endif()
   execute_process(COMMAND "${CMAKE_COMMAND}" -E env "SDKROOT=${sdk}" "${compiler}" ${common}
-    -module-name "${name}" -module-link-name "${link_name}" -Xfrontend -module-abi-name -Xfrontend "${link_name}"
+    ${language} -module-name "${name}" -module-link-name "${link_name}" -Xfrontend -module-abi-name -Xfrontend "${link_name}"
     -emit-module-path "${TOOLCHAIN_MACRO_OUTPUT}/${name}.swiftmodule"
     -Xlinker -install_name -Xlinker "@rpath/lib${link_name}.dylib"
     -o "${TOOLCHAIN_MACRO_OUTPUT}/lib${link_name}.dylib" ${sources} ${extra_links}
@@ -91,10 +114,12 @@ file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/BundledMacroLibraries.patch" b
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.cpp" adapter)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Sources/MacroBridge/MacroEntry.h" adapter_header)
 file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/BuildMacros.cmake" recipe)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/CMake/FoundationMacros.cmake" foundation_recipe)
+file(SHA256 "${TOOLCHAIN_REPOSITORY_ROOT}/Patches/PredicateStringComparisons.patch" predicate_patch)
 string(SHA256 macro_identity
-  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}")
+  "${TOOLCHAIN_NATIVE_RECEIPT_SHA256}${macro_patch}${bundled_macro_patch}${adapter}${adapter_header}${recipe}${foundation_recipe}${predicate_patch}")
 set(macro_files lib_CompilerSwiftLibraryPluginProvider.dylib libSwiftInProcPluginServer.dylib
-  libObservationMacros.dylib libSwiftMacros.dylib)
+  libObservationMacros.dylib libSwiftMacros.dylib libFoundationMacros.dylib ${foundation_sources})
 toolchain_record_cache("${TOOLCHAIN_MACRO_OUTPUT}/MacroArtifacts.json"
   "${TOOLCHAIN_MACRO_OUTPUT}" "${macro_identity}" ${macro_files})
 message(STATUS "Built macro libraries against the existing compiler support ABI.")

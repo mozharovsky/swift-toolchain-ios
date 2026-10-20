@@ -1,0 +1,70 @@
+--- a/PredicateMacro.swift
++++ b/PredicateMacro.swift
+@@ -32,16 +32,32 @@
+ ]
+ 
+ private var knownSupportedFunctions: Set<FunctionStructure> {
+-    #if FOUNDATION_FRAMEWORK
+     var result = _knownSupportedFunctions
++    #if FOUNDATION_FRAMEWORK
+     result.insert(FunctionStructure("evaluate", arguments: [.pack(labeled: nil)]))
++    #endif
+     result.insert(FunctionStructure("localizedStandardContains", arguments: [.unlabeled]))
+     result.insert(FunctionStructure("localizedCompare", arguments: [.unlabeled]))
+     result.insert(FunctionStructure("caseInsensitiveCompare", arguments: [.unlabeled]))
+     return result
+-    #else
+-    _knownSupportedFunctions
++}
++
++// Open-source Foundation declares no builders for these string comparisons. An unqualified call
++// lets a library that the program imports supply them with the expression types of Apple's
++// Foundation.
++private let libraryStringComparisons: Set<String> = [
++    "localizedStandardContains",
++    "localizedCompare",
++    "caseInsensitiveCompare",
++]
++
++private func builderQualifier(for function: String) -> String {
++    #if !FOUNDATION_FRAMEWORK
++    if libraryStringComparisons.contains(function) {
++        return ""
++    }
+     #endif
++    return "\(moduleName())::"
+ }
+ 
+ private let _supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] = [
+@@ -49,15 +65,11 @@
+ ]
+ 
+ private var supportedFunctionSuggestions: [FunctionStructure : FunctionStructure] {
+-    #if FOUNDATION_FRAMEWORK
+     var result = _supportedFunctionSuggestions
+     result[FunctionStructure("localizedCaseInsensitiveContains", arguments: [.unlabeled])] = FunctionStructure("localizedStandardContains", arguments: [.unlabeled])
+     result[FunctionStructure("localizedCaseInsensitiveCompare", arguments: [.unlabeled])] = FunctionStructure("localizedCompare", arguments: [.unlabeled])
+     result[FunctionStructure("localizedStandardCompare", arguments: [.unlabeled])] = FunctionStructure("localizedCompare", arguments: [.unlabeled])
+     return result
+-    #else
+-    _supportedFunctionSuggestions
+-    #endif
+ }
+ 
+ extension Array where Element == FunctionStructure.Argument {
+@@ -798,13 +810,13 @@
+             // Don't indent, because closures already get indented
+             let closureArg = makeArgument(label: nil, ExprSyntax(closure), shouldIndent: false)
+             return """
+-             \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
++             \(raw: indent)PredicateExpressions.\(raw: builderQualifier(for: name.text))build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
+              \(LabeledExprListSyntax(arguments))
+              \(raw: indent))\(raw: Trivia.space)\(closureArg.with(\.leadingTrivia, []).with(\.trailingTrivia, []))
+              """
+         } else {
+             return """
+-             \(raw: indent)PredicateExpressions.\(raw: moduleName())::build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
++             \(raw: indent)PredicateExpressions.\(raw: builderQualifier(for: name.text))build_\(name.with(\.leadingTrivia, []).with(\.trailingTrivia, []))(
+              \(LabeledExprListSyntax(arguments))
+              \(raw: indent))
+              """

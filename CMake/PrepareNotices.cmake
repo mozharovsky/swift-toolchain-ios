@@ -7,6 +7,8 @@ set(native_notices
   "swift-syntax|LICENSE.txt|SwiftSyntax.txt"
   "swift-cmark|COPYING|Cmark.txt"
   "string-processing|LICENSE.txt|StringProcessing.txt"
+  "swift-foundation|LICENSE.md|SwiftFoundation.txt"
+  "swift-foundation|NOTICE.txt|SwiftFoundationNotice.txt"
   "llvm-project|llvm/LICENSE.TXT|LLVM.txt"
   "llvm-project|clang/LICENSE.TXT|Clang.txt"
   "llvm-project|lld/LICENSE.TXT|LLD.txt"

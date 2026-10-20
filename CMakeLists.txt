@@ -162,6 +162,10 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/cache-manifest-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/CacheManifest.cmake")
+  add_test(NAME FoundationMacroSources
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/foundation-macro-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/FoundationMacros.cmake")
   add_test(NAME ArtifactNotices
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/notice-tests"

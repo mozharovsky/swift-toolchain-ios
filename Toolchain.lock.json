@@ -38,6 +38,13 @@
       "revision": "bf9cd9a0cfb0481f0825509aeb81ff3135bac250",
       "license": "Apache-2.0 WITH Swift-exception",
       "archiveSHA256": "5579ce5ca464037f2d3247ea52228693ea853892b18f3157402afe904270a7fe"
+    },
+    {
+      "name": "swift-foundation",
+      "repository": "https://github.com/swiftlang/swift-foundation.git",
+      "revision": "3b9d8f42b7923a7c1ae9ce20f3b05d1facac334e",
+      "license": "Apache-2.0 WITH Swift-exception",
+      "archiveSHA256": "b7191f109b25ca899e99a810fca3a65eac7183d772783c9321c899f5c3b7b257"
     }
   ],
   "sdk": {

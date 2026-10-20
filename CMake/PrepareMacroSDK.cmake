@@ -19,6 +19,10 @@ foreach(shim _SwiftSyntaxCShims _SwiftLibraryPluginProviderCShims)
     DESTINATION "${macro_sdk}/Includes/${shim}")
 endforeach()
 file(COPY "${payload}/Notices" DESTINATION "${macro_sdk}")
+# Desktop tools build the same Foundation macros for their own host from the compiled sources.
+foreach(source IN LISTS foundation_sources)
+  file(COPY "${TOOLCHAIN_MACRO_OUTPUT}/${source}" DESTINATION "${macro_sdk}/Sources/FoundationMacros")
+endforeach()
 file(WRITE "${macro_sdk}/Compatibility.json"
   "{\"schemaVersion\":1,\"swiftVersion\":\"${TOOLCHAIN_SWIFT_VERSION}\","
   "\"compilerHost\":\"${TOOLCHAIN_COMPILER_HOST}\",\"nativeReceiptSHA256\":\"${TOOLCHAIN_NATIVE_RECEIPT_SHA256}\"}\n")

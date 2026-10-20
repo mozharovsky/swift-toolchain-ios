@@ -9,7 +9,17 @@ struct ConfigurationTests {
         let configuration = try ToolchainConfiguration.load(from: Self.configurationURL)
         #expect(configuration.compilerHost == "arm64-apple-ios18.0")
         #expect(configuration.programTarget == "wasm32-unknown-wasip1")
-        #expect(configuration.sources.count == 5)
+        #expect(configuration.sources.count == 6)
+    }
+
+    /// Macro preparation builds the Foundation macros from the release that produced the SDK.
+    @Test func lockedInputsPinFoundationMacroSource() throws {
+        let configuration = try ToolchainConfiguration.load(from: Self.configurationURL)
+        let foundation = try #require(configuration.sources.first {
+            $0.name == "swift-foundation"
+        })
+        #expect(foundation.repository == "https://github.com/swiftlang/swift-foundation.git")
+        #expect(foundation.revision == "3b9d8f42b7923a7c1ae9ce20f3b05d1facac334e")
     }
 
     /// A WASM host or native program target would invert the intended cross-compilation boundary.
