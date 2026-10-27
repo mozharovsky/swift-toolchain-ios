@@ -26,6 +26,7 @@ Module conversion requires an Apple platform. Metadata and repository validation
 - ``CompilerArtifact``
 - ``CompilerArtifactSlice``
 - ``GuestBuiltins``
+- ``GuestFoundation``
 - ``MacroBuildSupport``
 - ``ModuleCompression``
 

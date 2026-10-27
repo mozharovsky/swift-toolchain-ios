@@ -59,10 +59,13 @@ struct ArtifactManifestTests {
 
     /// Releases before the Foundation macros remain valid because their inputs omit the source.
     ///
+    /// These releases also predate the guest Foundation patch, which needs the same source.
+    ///
     /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
     @Test func acceptsLegacyFoundationMacros() throws {
         let manifest = try Self.modified { object in
             object.removeValue(forKey: "predicateStringComparisonsPatchSHA256")
+            object.removeValue(forKey: "guestFoundation")
             var inputs = try #require(object["inputs"] as? [String: Any])
             let sources = try #require(inputs["sources"] as? [[String: Any]])
             inputs["sources"] = sources.filter { $0["name"] as? String != "swift-foundation" }
@@ -355,6 +358,79 @@ struct ArtifactManifestTests {
         #expect(throws: ToolchainError.self) { try manifest.validate() }
     }
 
+    /// Reads releases that predate the locale patch, so `verify-artifact-manifest` keeps accepting
+    /// releases that ship the SDK's original Foundation archive.
+    ///
+    /// - Throws: Fixture loading or JSON conversion fails, or decoded metadata is invalid.
+    @Test func acceptsLegacyGuestFoundation() throws {
+        let manifest = try Self.modified { object in object.removeValue(forKey: "guestFoundation") }
+        #expect(manifest.guestFoundation == nil)
+        try manifest.validate()
+    }
+
+    /// Preserves the Foundation provenance through the manifest's public Codable contract.
+    ///
+    /// - Throws: Fixture loading, encoding, or decoding fails.
+    @Test func preservesGuestFoundation() throws {
+        let original = try Self.fixture()
+        let restored = try JSONDecoder().decode(
+            ArtifactManifest.self, from: JSONEncoder().encode(original),
+        )
+        #expect(restored.guestFoundation == original.guestFoundation)
+        #expect(restored.guestFoundation?.members.contains("Locale_Cache.swift.obj") == true)
+    }
+
+    /// Accepts the banner of the pinned release with or without its zero patch component.
+    ///
+    /// - Parameter compiler: The first line of the compiling Swift release's version output.
+    /// - Throws: Fixture conversion fails, or decoded metadata is invalid.
+    @Test(arguments: [
+        "Apple Swift version 6.4 (swift-6.4-RELEASE)",
+        "Swift version 6.4.0 (swift-6.4.0-RELEASE)",
+    ])
+    func acceptsGuestFoundationCompilers(_ compiler: String) throws {
+        let manifest = try Self.modified { object in
+            var record = try #require(object["guestFoundation"] as? [String: Any])
+            record["compiler"] = compiler
+            object["guestFoundation"] = record
+        }
+        try manifest.validate()
+    }
+
+    /// Rejects a Foundation record that escapes the payload, names another source or compiler,
+    /// claims an unchanged archive, or lists members that cannot hold the locale change.
+    ///
+    /// - Parameter fault: The invalid Foundation metadata applied to the fixture record.
+    /// - Throws: Fixture conversion fails.
+    @Test(arguments: [
+        "parent", "archive", "component", "directory", "revision", "compiler", "development",
+        "patch", "unchanged", "empty", "duplicate", "locale", "member",
+    ])
+    func rejectsInvalidGuestFoundation(_ fault: String) throws {
+        let manifest = try Self.modified { object in
+            var record = try #require(object["guestFoundation"] as? [String: Any])
+            switch fault {
+            case "parent": record["path"] = "../libFoundationEssentials.a"
+            case "archive": record["path"] = "usr/lib/libFoundationEssentials.so"
+            case "component": record["component"] = "swift-corelibs-foundation"
+            case "directory": record["sourcePath"] = "Sources/FoundationInternationalization"
+            case "revision": record["revision"] = String(repeating: "1", count: 40)
+            case "compiler": record["compiler"] = "Apple Swift version 6.3 (swift-6.3-RELEASE)"
+            case "development":
+                record["compiler"] = "Swift version 6.4-dev (LLVM 1234, Swift 5678)"
+            case "patch": record["patchSHA256"] = "invalid"
+            case "unchanged": record["sha256"] = record["replacedSHA256"]
+            case "empty": record["members"] = [String]()
+            case "duplicate":
+                record["members"] = ["Locale_Cache.swift.obj", "Locale_Cache.swift.obj"]
+            case "locale": record["members"] = ["Calendar.swift.obj"]
+            default: record["members"] = ["Locale_Cache.swift.obj", "Locale/Locale.swift.obj"]
+            }
+            object["guestFoundation"] = record
+        }
+        #expect(throws: ToolchainError.self) { try manifest.validate() }
+    }
+
     /// Builds a builtins record whose source and compiler match the pinned LLVM revision.
     ///
     /// - Parameter revision: The pinned llvm-project revision from the lock file.
@@ -369,6 +445,23 @@ struct ArtifactManifestTests {
                 + "(https://github.com/swiftlang/llvm-project.git \(revision))",
             replacedSHA256: String(repeating: "a", count: 64),
             sha256: String(repeating: "b", count: 64), definedSymbols: 218,
+        )
+    }
+
+    /// Builds a Foundation record whose source and compiler match the pinned inputs.
+    ///
+    /// - Parameter revision: The pinned swift-foundation revision from the lock file.
+    /// - Returns: A valid record with placeholder digests.
+    private static func guestFoundation(revision: String) -> GuestFoundation {
+        GuestFoundation(
+            path: "swift.xctoolchain/usr/lib/swift_static/wasi/libFoundationEssentials.a",
+            component: "swift-foundation", revision: revision,
+            sourcePath: "Sources/FoundationEssentials",
+            patchSHA256: String(repeating: "c", count: 64),
+            compiler: "Apple Swift version 6.4 (swift-6.4-RELEASE)",
+            members: ["Locale.swift.obj", "Locale_Cache.swift.obj"],
+            replacedSHA256: String(repeating: "a", count: 64),
+            sha256: String(repeating: "b", count: 64),
         )
     }
 
@@ -420,6 +513,9 @@ struct ArtifactManifestTests {
         let inputs = try ToolchainConfiguration
             .load(from: root.appending(path: "Toolchain.lock.json"))
         let llvmRevision = try #require(inputs.sources.first { $0.name == "llvm-project" }).revision
+        let foundationRevision = try #require(
+            inputs.sources.first { $0.name == "swift-foundation" },
+        ).revision
         let names = [
             "SwiftCompilerBridge",
             "SwiftCompilerSDK",
@@ -447,7 +543,8 @@ struct ArtifactManifestTests {
                 repeating: "c",
                 count: 64,
             ), nativeCompiler: "AppleClang 21.0.0.21000123",
-            guestBuiltins: guestBuiltins(revision: llvmRevision), inputs: inputs,
+            guestBuiltins: guestBuiltins(revision: llvmRevision),
+            guestFoundation: guestFoundation(revision: foundationRevision), inputs: inputs,
             macroBuildSupport: MacroBuildSupport(
                 archive: "MacroBuildSupport.zip",
                 checksum: String(repeating: "f", count: 64),

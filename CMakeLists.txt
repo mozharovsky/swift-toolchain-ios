@@ -153,6 +153,10 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/guest-builtins-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/GuestBuiltins.cmake")
+  add_test(NAME GuestFoundation
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/guest-foundation-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/GuestFoundation.cmake")
   add_test(NAME ModuleCodecToolchain
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/module-codec-tests"

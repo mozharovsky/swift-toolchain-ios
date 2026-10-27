@@ -120,6 +120,30 @@ the number of defined symbols. Archive verification checks that digest and count
 slices. Manifests from earlier releases omit the record and ship the SDK's original archive. The
 artifact schema version remains 2.
 
+## Guest Foundation
+
+Swift's WASM SDK ships a FoundationEssentials whose current locale is always `en_001`. Packaging
+patches `libFoundationEssentials.a` so that a guest's current locale and preferred languages follow
+the `LC_ALL` and `LANG` environment variables. A host passes the device locale in one of them when
+it starts a guest. Guests that receive neither variable keep `en_001`. The time zone already follows
+`TZ` and the calendar follows the locale, so neither needs a patch.
+
+Packaging compiles the module's sources from the pinned swift-foundation revision twice with the
+bootstrap Swift release. The options follow the SDK's static Release build with whole-module
+optimization. The first build omits the patch and must reproduce every SDK member's size and symbol
+table. Objects differ from the SDK's only in a module hash that covers the compiler version and the
+build's paths. Packaging compiles with paths relative to its work directory, so the same inputs
+produce identical archive bytes in any checkout.
+
+The second build applies `LocaleEnvironment.patch` and must produce the same compiled module. Only
+the members whose bytes changed replace the SDK's members, which keeps the archive's other members,
+member order, and format. Whole-module optimization inlines the locale code into about ten members.
+
+The manifest's `guestFoundation` record names the payload path, the source revision, the patch
+digest, the compiler, and the replaced members. It also records the replaced and packaged archive
+digests. Archive verification checks the packaged digest in both SDK slices. Manifests from earlier
+releases omit the record.
+
 ## Layout and validation
 
 `Frameworks` separates device and simulator frameworks under their XCFramework slice identifiers.

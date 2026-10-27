@@ -62,6 +62,12 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// Releases before the producer rebuilt these builtins omit the record and ship the SDK's
     /// unoptimized archive. Consumers can compare its digest with the archive in their payload.
     package let guestBuiltins: GuestBuiltins?
+    /// The patched FoundationEssentials archive that replaces the SDK's copy in both slices.
+    ///
+    /// Releases before the locale patch omit the record and ship the SDK's original archive, whose
+    /// guest locale is always `en_001`. Consumers can compare its digest with the archive in their
+    /// payload.
+    package let guestFoundation: GuestFoundation?
     /// Complete source and SDK identities remain available after archives leave the build tree.
     package let inputs: ToolchainConfiguration
     /// Native macro build inputs remain outside the application's SwiftPM product.
@@ -91,7 +97,8 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
     /// A native profile record supplies every restriction patch identity together. Earlier
     /// manifests can omit the complete record without claiming those restrictions. A guest
     /// builtins record must name compiler-rt at the pinned llvm-project revision, a release build,
-    /// and a compiler built from that revision.
+    /// and a compiler built from that revision. A guest Foundation record must name the pinned
+    /// swift-foundation revision and Swift release.
     ///
     /// A release whose inputs pin swift-foundation must contain the `FoundationMacros` framework.
     /// Earlier releases pin no such source and omit the framework. A predicate patch identity
@@ -142,6 +149,7 @@ package struct ArtifactManifest: Codable, Equatable, Sendable {
             try CompilerArtifact.validateChecksum(predicateStringComparisonsPatchSHA256)
         }
         try guestBuiltins?.validate(inputs: inputs)
+        try guestFoundation?.validate(inputs: inputs)
         let profileIdentities = [
             restrictedSwiftPatchSHA256,
             restrictedLLVMPatchSHA256,
