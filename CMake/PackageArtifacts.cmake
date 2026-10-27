@@ -23,6 +23,10 @@ file(MAKE_DIRECTORY "${TOOLCHAIN_ARTIFACT_OUTPUT}/XCFrameworks"
 include("${CMAKE_CURRENT_LIST_DIR}/GuestBuiltins.cmake")
 toolchain_build_guest_builtins(TOOLCHAIN_GUEST_BUILTINS guest_builtins_compiler
   "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work/GuestBuiltins")
+# Both SDK slices also receive the same rebuilt FoundationEssentials objects.
+include("${CMAKE_CURRENT_LIST_DIR}/GuestFoundation.cmake")
+toolchain_build_guest_foundation(TOOLCHAIN_GUEST_FOUNDATION_MEMBERS guest_foundation_compiler
+  "${TOOLCHAIN_ARTIFACT_OUTPUT}/Work/GuestFoundation")
 
 # Each platform verifies its own native receipt before its libraries enter an XCFramework.
 function(toolchain_prepare_platform platform macro_output)
@@ -33,6 +37,8 @@ function(toolchain_prepare_platform platform macro_output)
   set(${platform}_compiler "${TOOLCHAIN_NATIVE_COMPILER}" PARENT_SCOPE)
   set(${platform}_replaced_builtins "${TOOLCHAIN_REPLACED_BUILTINS_SHA256}" PARENT_SCOPE)
   set(${platform}_builtin_symbols "${TOOLCHAIN_GUEST_BUILTIN_SYMBOLS}" PARENT_SCOPE)
+  set(${platform}_replaced_foundation "${TOOLCHAIN_REPLACED_FOUNDATION_SHA256}" PARENT_SCOPE)
+  set(${platform}_foundation "${TOOLCHAIN_GUEST_FOUNDATION_SHA256}" PARENT_SCOPE)
 endfunction()
 toolchain_prepare_platform(device "${device_macro_output}")
 toolchain_prepare_platform(simulator "${TOOLCHAIN_SIMULATOR_MACRO_OUTPUT}")
@@ -48,6 +54,13 @@ if(NOT device_replaced_builtins STREQUAL simulator_replaced_builtins
 endif()
 toolchain_guest_builtins_record(guest_builtins_record "${TOOLCHAIN_GUEST_BUILTINS}"
   "${guest_builtins_compiler}" "${device_replaced_builtins}" "${device_builtin_symbols}")
+if(NOT device_replaced_foundation STREQUAL simulator_replaced_foundation
+    OR NOT device_foundation STREQUAL simulator_foundation)
+  message(FATAL_ERROR "Device and simulator SDK slices must hold the same FoundationEssentials archive.")
+endif()
+toolchain_guest_foundation_record(guest_foundation_record "${device_foundation}"
+  "${guest_foundation_compiler}" "${device_replaced_foundation}"
+  "${TOOLCHAIN_GUEST_FOUNDATION_MEMBERS}")
 set(names "${device_names}")
 set(macro_sdk "${TOOLCHAIN_ARTIFACT_OUTPUT}/Development/MacroBuildSupport")
 set(macro_sdk_archive "${TOOLCHAIN_ARTIFACT_OUTPUT}/Archives/MacroBuildSupport.zip")
@@ -141,6 +154,7 @@ file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/ArtifactManifest.json"
   "  \"macroAdapterSHA256\": \"${adapter_checksum}\",\n"
   "  \"nativeCompiler\": \"${device_compiler}\",\n"
   "  \"guestBuiltins\": ${guest_builtins_record},\n"
+  "  \"guestFoundation\": ${guest_foundation_record},\n"
   "  \"macroBuildSupport\": ${macro_sdk_record},\n  \"inputs\": ${TOOLCHAIN_INPUTS},\n  \"artifacts\": ${artifacts}\n}\n")
 file(WRITE "${TOOLCHAIN_ARTIFACT_OUTPUT}/Package.swift"
   "// swift-tools-version: 6.3\nimport PackageDescription\n\n"

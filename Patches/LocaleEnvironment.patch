@@ -1,0 +1,41 @@
+--- a/Sources/FoundationEssentials/Locale/Locale_Cache.swift
++++ b/Sources/FoundationEssentials/Locale/Locale_Cache.swift
+@@ -292,17 +292,34 @@
+ #else
+     func preferences() -> (LocalePreferences, Bool) {
+         var prefs = LocalePreferences()
+-        prefs.locale = "en_001"
+-        prefs.languages = ["en-001"]
++        prefs.locale = preferredLocale()
++        prefs.languages = preferredLanguages(forCurrentUser: false)
+         return (prefs, true)
+     }
+ 
+     func preferredLanguages(forCurrentUser: Bool) -> [String] {
+-        [Locale.canonicalLanguageIdentifier(from: "en-001")]
++        // The language keeps the script and region and drops keywords such as `@rg=gbzzzz`.
++        let identifier = preferredLocale() ?? "en_001"
++        let language = identifier.prefix { $0 != "@" }.map { $0 == "_" ? "-" : $0 }
++        return [Locale.canonicalLanguageIdentifier(from: String(language))]
+     }
+ 
++    /// Returns the locale that the environment names, or `en_001` when it names none.
++    ///
++    /// `LC_ALL` overrides `LANG`, as in POSIX. Foundation keeps one locale for every category, so
++    /// the other category variables do not apply. A value such as `de_DE.UTF-8` loses its codeset,
++    /// and the `C` and `POSIX` locales name no locale.
+     func preferredLocale() -> String? {
+-        "en_001"
++        let environment = ProcessInfo.processInfo.environment
++        let values = [environment["LC_ALL"], environment["LANG"]].compactMap { $0 }
++        guard var identifier = values.first(where: { !$0.isEmpty }) else {
++            return "en_001"
++        }
++        if let codeset = identifier.firstIndex(of: ".") {
++            let modifier = identifier[codeset...].firstIndex(of: "@") ?? identifier.endIndex
++            identifier.removeSubrange(codeset..<modifier)
++        }
++        return identifier.isEmpty || identifier == "C" || identifier == "POSIX" ? "en_001" : identifier
+     }
+ #endif
+ 

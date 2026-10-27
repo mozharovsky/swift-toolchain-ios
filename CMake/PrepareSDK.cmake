@@ -34,6 +34,13 @@ if(NOT DEFINED TOOLCHAIN_GUEST_BUILTINS)
 endif()
 toolchain_install_guest_builtins(TOOLCHAIN_REPLACED_BUILTINS_SHA256 TOOLCHAIN_GUEST_BUILTIN_SYMBOLS
   "${payload}" "${TOOLCHAIN_GUEST_BUILTINS}")
+include("${CMAKE_CURRENT_LIST_DIR}/GuestFoundation.cmake")
+if(NOT DEFINED TOOLCHAIN_GUEST_FOUNDATION_MEMBERS)
+  message(FATAL_ERROR "Build the guest Foundation objects before preparing the SDK.")
+endif()
+toolchain_install_guest_foundation(TOOLCHAIN_REPLACED_FOUNDATION_SHA256 "${payload}"
+  "${TOOLCHAIN_GUEST_FOUNDATION_OBJECTS}" "${TOOLCHAIN_GUEST_FOUNDATION_MEMBERS}")
+file(SHA256 "${payload}/${TOOLCHAIN_GUEST_FOUNDATION_PATH}" TOOLCHAIN_GUEST_FOUNDATION_SHA256)
 file(WRITE "${payload}/Compatibility.json"
   "{\n  \"schemaVersion\": 1,\n  \"swiftVersion\": \"${TOOLCHAIN_SWIFT_VERSION}\",\n"
   "  \"compilerCommit\": \"${TOOLCHAIN_swift_REVISION}\",\n"

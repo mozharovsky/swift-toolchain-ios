@@ -75,6 +75,15 @@ builders keep the `FoundationEssentials` qualifier. A library that the program i
 those builders with the expression types of Apple's Foundation. Without such a library, type
 checking reports the missing builder.
 
+`LocaleEnvironment.patch` applies to the same pinned swift-foundation revision. Packaging applies it
+to a copy of `Sources/FoundationEssentials` and rebuilds the module for the WASM SDK. Without the
+patch, a guest's `Locale.current` is always `en_001` on platforms without CoreFoundation
+preferences. With it, the current locale follows `LC_ALL` and then `LANG`, as in POSIX.
+
+A value such as `de_DE.UTF-8` loses its codeset and keeps any `@` keywords. An empty value and the
+`C` and `POSIX` locales keep `en_001`. Preferred languages follow the same locale, such as `de-DE`.
+The patch adds no declarations, so the module interface and the SDK's compiled module stay the same.
+
 Both native restriction patches participate in source and native-cache identities. The bundled
 macro and predicate patches participate in the macro cache identity. Archive validation checks the resulting
 native imports independently of these source records. Runtime profile tests use the patched
