@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 include("${CMAKE_CURRENT_LIST_DIR}/SwiftRelease.cmake")
 
 # Packaging and verification use the declared bootstrap release for their maintenance executable.
-function(toolchain_module_codec_swift output)
+function(toolchain_payload_codec_swift output)
   get_filename_component(repository "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/.." ABSOLUTE)
   set(compiler "${TOOLCHAIN_BOOTSTRAP_ROOT}/bin/swift")
   if(NOT IS_ABSOLUTE "${TOOLCHAIN_BOOTSTRAP_ROOT}" OR NOT EXISTS "${compiler}")
@@ -14,15 +14,15 @@ function(toolchain_module_codec_swift output)
     COMMAND_ERROR_IS_FATAL ANY)
   toolchain_matches_swift_release(bootstrap_matches "${version}" "${expected_version}")
   if(NOT bootstrap_matches)
-    message(FATAL_ERROR "The module codec bootstrap must match Swift ${expected_version}.")
+    message(FATAL_ERROR "The payload codec bootstrap must match Swift ${expected_version}.")
   endif()
   set(${output} "${compiler}" PARENT_SCOPE)
 endfunction()
 
 # The maintenance executable supplies Apple's codec without rebuilding native compiler libraries.
-function(toolchain_prepare_module_codec output)
+function(toolchain_prepare_payload_codec output)
   get_filename_component(repository "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/.." ABSOLUTE)
-  toolchain_module_codec_swift(compiler)
+  toolchain_payload_codec_swift(compiler)
   execute_process(COMMAND "${compiler}" build --package-path "${repository}"
     --configuration release --product toolchain --jobs 4 COMMAND_ERROR_IS_FATAL ANY)
   execute_process(COMMAND "${compiler}" build --package-path "${repository}"

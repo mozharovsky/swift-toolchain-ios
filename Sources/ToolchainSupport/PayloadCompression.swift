@@ -3,46 +3,45 @@ package import Foundation
     import Compression
 #endif
 
-/// An LZFSE module codec used by artifact packaging and independent archive verification.
+/// An LZFSE codec for SDK payload files, used by artifact packaging and archive verification.
 ///
-/// Both operations require Apple's Compression framework. Original and restored modules must
+/// Both operations require Apple's Compression framework. Original and restored files must
 /// contain 1 byte through `maximumDecodedBytes`. Invalid bounds, unsupported hosts, and codec
 /// failures use `ToolchainError.invalidArtifact`. Callers verify the original digest after
 /// decoding.
-package enum ModuleCompression {
-    /// The 128 MiB output limit enforced by packaging and archive verification for each module.
+package enum PayloadCompression {
+    /// The 128 MiB output limit enforced by packaging and archive verification for each file.
     package static let maximumDecodedBytes = 128 * 1024 * 1024
 
-    /// Compresses one serialized module without changing the bytes restored by consumers.
+    /// Compresses one payload file without changing the bytes restored by consumers.
     ///
-    /// - Parameter module: Nonempty module bytes, limited to `maximumDecodedBytes`.
+    /// - Parameter file: Nonempty file bytes, limited to `maximumDecodedBytes`.
     /// - Returns: The binary LZFSE representation stored as a compiler resource.
     /// - Throws: `ToolchainError.invalidArtifact` when the input size is invalid, compression
-    /// fails,
-    ///   or the host lacks Apple's Compression framework.
-    package static func encode(_ module: Data) throws(ToolchainError) -> Data {
-        guard !module.isEmpty, module.count <= maximumDecodedBytes else {
-            throw .invalidArtifact("A serialized module must contain between 1 byte and 128 MiB.")
+    ///   fails, or the host lacks Apple's Compression framework.
+    package static func encode(_ file: Data) throws(ToolchainError) -> Data {
+        guard !file.isEmpty, file.count <= maximumDecodedBytes else {
+            throw .invalidArtifact("A payload file must contain between 1 byte and 128 MiB.")
         }
         #if canImport(Compression)
             do {
-                return try (module as NSData).compressed(using: .lzfse) as Data
+                return try (file as NSData).compressed(using: .lzfse) as Data
             } catch {
-                throw .invalidArtifact("The serialized module could not be compressed with LZFSE.")
+                throw .invalidArtifact("The payload file could not be compressed with LZFSE.")
             }
         #else
-            throw .invalidArtifact("LZFSE module processing requires an Apple platform.")
+            throw .invalidArtifact("LZFSE payload processing requires an Apple platform.")
         #endif
     }
 
-    /// Restores one module within the output size declared by its packaging metadata.
+    /// Restores one file within the output size declared by its packaging metadata.
     ///
-    /// Callers compare the restored bytes with the module's recorded content digest.
+    /// Callers compare the restored bytes with the file's recorded content digest.
     ///
     /// - Parameters:
     ///   - encoded: The nonempty LZFSE representation from the artifact.
     ///   - expectedByteCount: The exact restored size in bytes, from 1 through
-    /// `maximumDecodedBytes`.
+    ///     `maximumDecodedBytes`.
     /// - Returns: Decoded bytes whose count equals the declared size.
     /// - Throws: `ToolchainError.invalidArtifact` for unsupported hosts, invalid sizes, malformed
     ///   compressed data, trailing bytes, or output that does not match the declared size.
@@ -52,7 +51,7 @@ package enum ModuleCompression {
     ) throws(ToolchainError) -> Data {
         guard !encoded.isEmpty, expectedByteCount > 0,
               expectedByteCount <= maximumDecodedBytes else {
-            throw .invalidArtifact("A serialized module must declare between 1 byte and 128 MiB.")
+            throw .invalidArtifact("A payload file must declare between 1 byte and 128 MiB.")
         }
         #if canImport(Compression)
             // One spare byte distinguishes exact output from a decoder that filled a smaller
@@ -87,12 +86,12 @@ package enum ModuleCompression {
                 }
             }
             guard count == expectedByteCount else {
-                throw .invalidArtifact("The LZFSE module does not match its declared decoded size.")
+                throw .invalidArtifact("The LZFSE file does not match its declared decoded size.")
             }
             decoded.count = count
             return decoded
         #else
-            throw .invalidArtifact("LZFSE module processing requires an Apple platform.")
+            throw .invalidArtifact("LZFSE payload processing requires an Apple platform.")
         #endif
     }
 }

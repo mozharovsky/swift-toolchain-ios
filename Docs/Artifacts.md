@@ -206,7 +206,7 @@ Archive verification requires one complete LZFSE stream and rejects trailing enc
 Consumers that support only the earlier Base64 schema must update before adopting these artifacts.
 Independent archive verification also accepts schema version 1 for existing Base64 releases.
 
-Packaging and verification build the maintenance executable and use its `module-codec` command.
+Packaging and verification build the maintenance executable and use its `payload-codec` command.
 Both operations select Swift from `TOOLCHAIN_BOOTSTRAP_ROOT` and require the release recorded in
 `Toolchain.lock.json` before building the codec.
 Apple's Compression framework supplies LZFSE. This host-side operation does not rebuild the native

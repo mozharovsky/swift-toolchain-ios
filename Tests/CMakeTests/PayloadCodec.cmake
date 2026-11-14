@@ -3,8 +3,8 @@ string(JSON version GET "${inputs}" swiftVersion)
 file(MAKE_DIRECTORY "${TOOLCHAIN_TEST_ROOT}")
 set(probe "${TOOLCHAIN_TEST_ROOT}/probe.cmake")
 file(WRITE "${probe}"
-  "include(\"${TOOLCHAIN_SOURCE_DIR}/CMake/ModuleCodec.cmake\")\n"
-  "toolchain_module_codec_swift(selected)\n"
+  "include(\"${TOOLCHAIN_SOURCE_DIR}/CMake/PayloadCodec.cmake\")\n"
+  "toolchain_payload_codec_swift(selected)\n"
   "file(WRITE \"\${TOOLCHAIN_RESULT}\" \"\${selected}\")\n")
 
 # Version-only fixtures check compiler selection without starting a Swift build.
@@ -32,7 +32,7 @@ function(check_bootstrap name root expected_error)
     endif()
     file(READ "${result}" selected)
     if(NOT selected STREQUAL "${root}/bin/swift")
-      message(FATAL_ERROR "The module codec selected Swift outside its declared bootstrap.")
+      message(FATAL_ERROR "The payload codec selected Swift outside its declared bootstrap.")
     endif()
   endif()
 endfunction()

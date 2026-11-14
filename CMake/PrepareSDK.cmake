@@ -1,5 +1,5 @@
 include("${CMAKE_CURRENT_LIST_DIR}/ArtifactHelpers.cmake")
-include("${CMAKE_CURRENT_LIST_DIR}/ModuleCodec.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/PayloadCodec.cmake")
 if(NOT EXISTS "${TOOLCHAIN_SDK_ARCHIVE}")
   message(FATAL_ERROR "Provide the checksum-pinned SDK archive before packaging.")
 endif()
@@ -47,7 +47,7 @@ file(WRITE "${payload}/Compatibility.json"
   "  \"target\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n  \"revision\": \"${sdk_version}\"\n}\n")
 
 # Xcode strips serialized native-module filenames even when they are guest compiler input data.
-toolchain_prepare_module_codec(module_codec)
+toolchain_prepare_payload_codec(payload_codec)
 set(modules "[]")
 set(index 0)
 file(GLOB_RECURSE module_files LIST_DIRECTORIES FALSE "${payload}/*.swiftmodule")
@@ -57,7 +57,7 @@ foreach(module IN LISTS module_files)
   string(REGEX REPLACE "\\.swiftmodule$" ".compilerdata" encoded "${path}")
   file(SHA256 "${module}" checksum)
   file(SIZE "${module}" decoded_bytes)
-  execute_process(COMMAND "${module_codec}" module-codec compress "${module}" "${payload}/${encoded}"
+  execute_process(COMMAND "${payload_codec}" payload-codec compress "${module}" "${payload}/${encoded}"
     COMMAND_ERROR_IS_FATAL ANY)
   file(REMOVE "${module}")
   toolchain_json_string(path_json "${path}")
