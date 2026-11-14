@@ -23,6 +23,13 @@ import Testing
         #expect(try PayloadCompression.decode(encoded, expectedByteCount: count) == original)
     }
 
+    /// An archive without members holds only its 8-byte signature, and the SDK ships several.
+    @Test func compressedFilesRestoreEmptyStaticArchive() throws {
+        let original = Data("!<arch>\n".utf8)
+        let encoded = try PayloadCompression.encode(original)
+        #expect(try PayloadCompression.decode(encoded, expectedByteCount: 8) == original)
+    }
+
     /// A full output buffer must not make a truncated file look complete.
     @Test(arguments: [-1, 1])
     func compressedFilesRejectWrongDecodedSize(offset: Int) throws {

@@ -26,6 +26,9 @@ set(framework "${TOOLCHAIN_FRAMEWORK_ROOT}/SwiftCompilerSDK.framework")
 set(payload "${framework}/Payload")
 file(MAKE_DIRECTORY "${framework}/Headers" "${payload}/swift.xctoolchain/usr/lib")
 file(COPY "${sdk_source}/WASI.sdk" DESTINATION "${payload}" PATTERN ".DS_Store" EXCLUDE)
+# Devices never run the SDK's host configuration scripts, and app distribution rejects standalone
+# executables in an application bundle.
+file(REMOVE_RECURSE "${payload}/WASI.sdk/bin")
 file(COPY "${sdk_source}/${resources_path}" DESTINATION "${payload}/swift.xctoolchain/usr/lib"
   PATTERN ".DS_Store" EXCLUDE)
 include("${CMAKE_CURRENT_LIST_DIR}/GuestBuiltins.cmake")
@@ -46,30 +49,14 @@ file(WRITE "${payload}/Compatibility.json"
   "  \"compilerCommit\": \"${TOOLCHAIN_swift_REVISION}\",\n"
   "  \"target\": \"${TOOLCHAIN_PROGRAM_TARGET}\",\n  \"revision\": \"${sdk_version}\"\n}\n")
 
-# Xcode strips serialized native-module filenames even when they are guest compiler input data.
 toolchain_prepare_payload_codec(payload_codec)
-set(modules "[]")
-set(index 0)
-file(GLOB_RECURSE module_files LIST_DIRECTORIES FALSE "${payload}/*.swiftmodule")
-list(SORT module_files)
-foreach(module IN LISTS module_files)
-  file(RELATIVE_PATH path "${payload}" "${module}")
-  string(REGEX REPLACE "\\.swiftmodule$" ".compilerdata" encoded "${path}")
-  file(SHA256 "${module}" checksum)
-  file(SIZE "${module}" decoded_bytes)
-  execute_process(COMMAND "${payload_codec}" payload-codec compress "${module}" "${payload}/${encoded}"
-    COMMAND_ERROR_IS_FATAL ANY)
-  file(REMOVE "${module}")
-  toolchain_json_string(path_json "${path}")
-  toolchain_json_string(encoded_json "${encoded}")
-  string(JSON record SET "{}" path "${path_json}")
-  string(JSON record SET "${record}" encodedPath "${encoded_json}")
-  string(JSON record SET "${record}" sha256 "\"${checksum}\"")
-  string(JSON record SET "${record}" decodedByteCount "${decoded_bytes}")
-  string(JSON modules SET "${modules}" ${index} "${record}")
-  math(EXPR index "${index} + 1")
-endforeach()
+toolchain_encode_payload(encoded_files "${payload}" "${payload_codec}")
 include("${CMAKE_CURRENT_LIST_DIR}/PrepareNotices.cmake")
+toolchain_find_static_archives(archives "${payload}")
+if(archives)
+  list(JOIN archives ", " archives)
+  message(FATAL_ERROR "The SDK payload still contains static archives: ${archives}.")
+endif()
 file(GLOB_RECURSE payload_files LIST_DIRECTORIES FALSE "${payload}/*")
 list(SORT payload_files)
 set(identity_input "")
@@ -80,7 +67,8 @@ foreach(file IN LISTS payload_files)
 endforeach()
 string(SHA256 identity "${identity_input}")
 file(WRITE "${payload}/Materialization.json"
-  "{\"schemaVersion\":2,\"encoding\":\"lzfse\",\"identity\":\"${identity}\",\"modules\":${modules}}\n")
+  "{\"schemaVersion\":3,\"encoding\":\"lzfse\",\"identity\":\"${identity}\","
+  "\"encodedFiles\":${encoded_files}}\n")
 configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.h.in"
   "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h" @ONLY)
 configure_file("${CMAKE_CURRENT_LIST_DIR}/Templates/SDKBundle.m.in"
@@ -94,5 +82,5 @@ execute_process(COMMAND xcrun --sdk "${TOOLCHAIN_APPLE_SDK}" clang -target "${TO
   -o "${framework}/SwiftCompilerSDK" COMMAND_ERROR_IS_FATAL ANY)
 toolchain_framework_module("${framework}" SwiftCompilerSDK "${TOOLCHAIN_PACKAGE_WORK}/SwiftCompilerSDK.h")
 toolchain_framework_plist("${framework}" SwiftCompilerSDK)
-string(JSON module_count LENGTH "${modules}")
-message(STATUS "Prepared the verified WASM SDK and ${module_count} serialized module inputs.")
+string(JSON encoded_count LENGTH "${encoded_files}")
+message(STATUS "Prepared the verified WASM SDK and ${encoded_count} encoded payload files.")
