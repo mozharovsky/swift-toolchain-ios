@@ -97,6 +97,8 @@ endfunction()
 expect_collision(module-and-archive X.a X.swiftmodule)
 expect_collision(case-only x.a X.swiftmodule)
 expect_collision(existing-output X.a X.compilerdata)
+expect_collision(existing-output-case x.a X.compilerdata)
+expect_collision(existing-directory X.a X.compilerdata/member)
 
 # Detection follows both the file name and the ar signature of regular and thin archives.
 set(scan "${root}/scan")
