@@ -157,11 +157,15 @@ if(BUILD_TESTING)
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/guest-foundation-tests"
       -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/GuestFoundation.cmake")
-  add_test(NAME ModuleCodecToolchain
+  add_test(NAME PayloadCodecToolchain
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
-      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/module-codec-tests"
-      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/ModuleCodec.cmake")
-  set_tests_properties(ModuleCodecToolchain PROPERTIES TIMEOUT 20)
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/payload-codec-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/PayloadCodec.cmake")
+  set_tests_properties(PayloadCodecToolchain PROPERTIES TIMEOUT 20)
+  add_test(NAME PayloadEncoding
+    COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
+      "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/payload-encoding-tests"
+      -P "${CMAKE_SOURCE_DIR}/Tests/CMakeTests/PayloadEncoding.cmake")
   add_test(NAME ProducerCacheManifest
     COMMAND "${CMAKE_COMMAND}" "-DTOOLCHAIN_SOURCE_DIR=${CMAKE_SOURCE_DIR}"
       "-DTOOLCHAIN_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/cache-manifest-tests"

@@ -8,7 +8,8 @@ import Foundation
 /// members and global symbols as the SDK archive it replaces. Releases before this rebuild omit
 /// the record and ship the SDK's original archive.
 package struct GuestBuiltins: Codable, Equatable, Sendable {
-    /// The archive's location relative to the SDK framework's `Payload` directory.
+    /// The archive's path relative to the SDK framework's `Payload` directory after a consumer
+    /// restores the payload's encoded files.
     package let path: String
     /// The pinned source component that supplied the compiler-rt sources, which is `llvm-project`.
     package let component: String

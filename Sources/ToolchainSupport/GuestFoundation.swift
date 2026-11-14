@@ -11,7 +11,8 @@ import Foundation
 ///
 /// Releases before this patch omit the record and ship the SDK's original archive.
 package struct GuestFoundation: Codable, Equatable, Sendable {
-    /// The archive's location relative to the SDK framework's `Payload` directory.
+    /// The archive's path relative to the SDK framework's `Payload` directory after a consumer
+    /// restores the payload's encoded files.
     package let path: String
     /// The pinned source component that supplied the Foundation sources, which is
     /// `swift-foundation`.

@@ -10,7 +10,7 @@ struct ToolchainCommand: ParsableCommand {
         subcommands: [
             VerifyCommand.self,
             VerifyArtifactManifestCommand.self,
-            ModuleCodecCommand.self,
+            PayloadCodecCommand.self,
             CheckCommitCommand.self,
             CheckHistoryCommand.self,
             CheckRepositoryCommand.self,

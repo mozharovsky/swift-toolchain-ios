@@ -197,26 +197,40 @@ adapter without changing LLVM's other platform implementations. A new native bui
 after this patch or its adapter changes. The native receipt and release manifest record the patch
 identity. Older artifact manifests may omit that field.
 
-SDK resources live inside `SwiftCompilerSDK.framework/Payload`. Serialized Swift modules are stored
-as binary LZFSE resources because Xcode strips native-module filenames during artifact processing.
-`Materialization.json` uses schema version 2 and declares `encoding` as `lzfse`. Each module record
-contains its original path, encoded path, SHA-256, and `decodedByteCount`. A module must decode to
-exactly that byte count, from 1 through 128 MiB, before the consumer checks its original digest.
-Archive verification requires one complete LZFSE stream and rejects trailing encoded bytes.
-Consumers that support only the earlier Base64 schema must update before adopting these artifacts.
-Independent archive verification also accepts schema version 1 for existing Base64 releases.
+SDK resources live inside `SwiftCompilerSDK.framework/Payload`. Serialized Swift modules and static
+archives are stored as binary LZFSE files. Xcode strips native-module filenames during artifact
+processing. App Store validation rejects standalone libraries in an application bundle and treats
+every static archive as one, whatever its members contain.
 
-Packaging and verification build the maintenance executable and use its `module-codec` command.
+Packaging encodes every file named `*.swiftmodule` or `*.a`, including archives without members.
+The encoded file stays in the same directory, and `.compilerdata` replaces the original extension.
+For example, `libc.a` becomes `libc.compilerdata`. Packaging fails when two files would share an
+encoded path, including paths that differ only in case.
+
+`Materialization.json` uses schema version 3 and declares `encoding` as `lzfse`. Its `encodedFiles`
+array holds one record for each encoded file. A record contains the restored path, the encoded path,
+the SHA-256 of the restored bytes, and `decodedByteCount`. A file must decode to exactly that byte
+count, from 1 through 128 MiB, before the consumer checks its digest. A consumer restores every
+record the same way before the compiler or linker reads its path. The `guestBuiltins` and
+`guestFoundation` records also describe restored archive bytes.
+
+Archive verification requires one complete LZFSE stream and rejects trailing encoded bytes. It
+rejects a schema 3 payload that contains a file named `*.a` or a file that starts with the signature
+of a regular or thin archive. It checks the guest builtins and FoundationEssentials archives after
+restoring them. Independent archive verification also accepts schemas 1 and 2 for existing releases.
+
+Packaging and verification build the maintenance executable and use its `payload-codec` command.
 Both operations select Swift from `TOOLCHAIN_BOOTSTRAP_ROOT` and require the release recorded in
 `Toolchain.lock.json` before building the codec.
 Apple's Compression framework supplies LZFSE. This host-side operation does not rebuild the native
-compiler or modify the module's restored bytes.
-The remaining SDK contents keep the open toolchain layout. License texts and their source identities
+compiler or modify the file's restored bytes.
+The remaining SDK contents keep the open toolchain layout, except `WASI.sdk/bin`. Packaging omits that
+directory because it holds host configuration scripts that a device never runs. License texts and their source identities
 are included in the same payload. Notice text preserves upstream terms and copyright statements. Trailing whitespace is normalized, and the index records both the original selected-text digest and the packaged-file digest.
 
 Metadata verification checks names and version relationships. `VerifyArtifacts.cmake` independently
 extracts archives, checks byte hashes, validates platform markers and the native dependency closure,
-and restores each encoded SDK module to verify its original bytes. Packaging and archive validation
+and restores each encoded SDK file to verify its original bytes. Packaging and archive validation
 reject imports for process creation and instruction-cache or JIT operations that the current native
 profile excludes. These checks permit the normal data-mapping and bundled-library APIs.
 Application integration must also check the SDK after Xcode copies the frameworks.
