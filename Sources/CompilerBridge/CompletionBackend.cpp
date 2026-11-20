@@ -325,6 +325,11 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
         continue;
       }
       matchScore = matcher.scoreCandidate(name);
+      // The argument labels would lower the score of a function against a shorter keyword.
+      const llvm::StringRef base(swift_toolchain::completionBaseName(name));
+      if (base.size() < name.size() && matcher.matchesCandidate(base)) {
+        matchScore = std::max(matchScore, matcher.scoreCandidate(base));
+      }
       candidate.exactMatch = swift_toolchain::completionMatchesExactly(name, filter);
     }
     candidate.rank = {name, bucket(candidate, false), bucket(candidate, true), matchScore,

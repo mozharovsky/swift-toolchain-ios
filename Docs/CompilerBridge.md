@@ -126,7 +126,9 @@ have an invalid type, and a filtered list ranks them last.
 
 A filtered list puts exact matches first. An exact match compares the filter with the base name.
 For example, `print` matches `print(_:separator:terminator:)` exactly. Below the exact matches, a
-better fuzzy match comes first, and the result groups order equal matches. The list keeps the
+better fuzzy match comes first, and the result groups order equal matches. A function scores at
+least as well as its base name alone. Its argument labels then don't rank it below a shorter
+keyword, such as `private` for `pri`. The list keeps the
 requested number of results from the top of that order.
 
 ## Annotation
