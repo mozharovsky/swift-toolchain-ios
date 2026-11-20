@@ -27,6 +27,17 @@ if(BUILD_TESTING)
     target_link_options(CompilerBridgeContractTests PRIVATE -fsanitize=address,undefined)
   endif()
   add_test(NAME CompilerBridgeContract COMMAND CompilerBridgeContractTests)
+  add_executable(CompletionRankingTests
+    Sources/CompilerBridge/CompletionRanking.cpp
+    Tests/CompilerBridgeTests/CompletionRankingTests.cpp)
+  target_include_directories(CompletionRankingTests PRIVATE Sources/CompilerBridge)
+  target_compile_options(CompletionRankingTests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+  if(TOOLCHAIN_ENABLE_SANITIZERS)
+    target_compile_options(CompletionRankingTests PRIVATE
+      -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(CompletionRankingTests PRIVATE -fsanitize=address,undefined)
+  endif()
+  add_test(NAME CompletionRanking COMMAND CompletionRankingTests)
   add_executable(BundledPluginPolicyTests
     Sources/NativeProfile/BundledPluginPolicy.cpp
     Tests/NativeProfileTests/BundledPluginPolicyTests.cpp)

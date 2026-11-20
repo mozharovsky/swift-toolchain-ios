@@ -124,6 +124,11 @@ Each item carries `name`, `description`, `kind`, `type`, `sourceText`, `typeRela
 context without popularity data. An unfiltered list leaves out results that are not recommended or
 have an invalid type, and a filtered list ranks them last.
 
+A filtered list puts exact matches first. An exact match compares the filter with the base name.
+For example, `print` matches `print(_:separator:terminator:)` exactly. Below the exact matches, a
+better fuzzy match comes first, and the result groups order equal matches. The list keeps the
+requested number of results from the top of that order.
+
 ## Annotation
 
 `swift_compiler_annotate` lists the named references in a source file for an editor that colors
@@ -190,7 +195,7 @@ C header linkage, argument validation, owned messages with embedded NUL bytes, o
 recovery, shared serialization, and sticky invalidation. Its completion checks cover request
 validation, cancellation before and during a run, the reset, and the poisoned session. Its
 annotation checks cover request validation, forwarding, cancellation shared with completion, and
-the poisoned session.
+the poisoned session. A separate target checks the completion ranking without a compiler.
 `TOOLCHAIN_ENABLE_SANITIZERS` defaults to `OFF`. Setting it to `ON` instruments the bridge and bundled-plugin host tests with ASan and UBSan.
 `mise run native-check` enables this option. The test backend does not compile or interpret Swift.
 Its results are not compiler execution or physical-device evidence.

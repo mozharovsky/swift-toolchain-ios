@@ -1,4 +1,5 @@
 #include "CompilerBackend.h"
+#include "CompletionRanking.h"
 #include "SemanticSupport.h"
 #include "SwiftCompilerBridge.h"
 #include "swift/AST/DiagnosticConsumer.h"
@@ -169,18 +170,7 @@ const char *completionKindName(CompletionKind kind) {
   }
 }
 
-/// SourceKit's ordering groups, from least to most preferred.
-enum class Bucket {
-  NotRecommended,
-  Normal,
-  Literal,
-  NormalTypeMatch,
-  LiteralTypeMatch,
-  HighPriorityKeyword,
-  Operator,
-  ExpressionSpecific,
-  ExactMatch,
-};
+using Bucket = swift_toolchain::CompletionBucket;
 
 /// One candidate with the values the ranking compares.
 struct RankedResult {
@@ -188,12 +178,10 @@ struct RankedResult {
   CodeCompletionResult *result;
   /// The filter name used for matching and name ordering.
   llvm::StringRef name;
-  /// The normalized fuzzy-match score in the range from zero to one.
-  double matchScore;
-  /// The weighted match and semantic context score.
-  double score;
-  /// Whether the filter equals the name ignoring case.
+  /// Whether the filter equals the name's base name ignoring case.
   bool exactMatch;
+  /// The groups and scores that order the candidate.
+  swift_toolchain::CompletionRank rank;
 };
 
 /// Keywords that SourceKit promotes at statement starts.
@@ -305,7 +293,8 @@ void configureContext(swift::ide::CodeCompletionContext &context) {
 /// Filters, ranks, and serializes the results while the compiler instance keeps them alive.
 ///
 /// An unfiltered list leaves out results that are not recommended or have an invalid type, as
-/// SourceKit does. A filtered list keeps them and ranks them last.
+/// SourceKit does. A filtered list keeps them and ranks them last. The cut to `maximumResults`
+/// follows the ranking. A filtered list therefore keeps its best fuzzy matches.
 void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *> &results,
                   llvm::StringRef filter, uint32_t maximumResults, size_t &matched,
                   size_t &hidden) {
@@ -313,10 +302,17 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
   ranked.reserve(results.size());
   swift::ide::FuzzyStringMatcher matcher(filter);
   matcher.normalize = true;
+  // SourceKit moves the best non-literal results above untyped literals, so filtering demotes them.
+  const bool filtering = !filter.empty();
+  auto bucket = [filtering](const RankedResult &result, bool skip) {
+    Bucket value = bucketFor(result, skip);
+    return filtering && value == Bucket::Literal ? Bucket::Normal : value;
+  };
   for (CodeCompletionResult *result : results) {
     llvm::StringRef name = result->getFilterName();
-    RankedResult candidate{result, name, 0.0, 0.0, false};
-    if (filter.empty()) {
+    RankedResult candidate{result, name, false, {}};
+    double matchScore = 0.0;
+    if (!filtering) {
       if (result->isNotRecommended() ||
           result->getExpectedTypeRelation() == CodeCompletionResultTypeRelation::Invalid) {
         ++hidden;
@@ -328,35 +324,18 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
       if (!match) {
         continue;
       }
-      candidate.matchScore = matcher.scoreCandidate(name);
-      candidate.exactMatch = name.equals_insensitive(filter);
+      matchScore = matcher.scoreCandidate(name);
+      candidate.exactMatch = swift_toolchain::completionMatchesExactly(name, filter);
     }
-    candidate.score = candidate.matchScore * 13 + semanticContextScore(*result) * 7;
+    candidate.rank = {name, bucket(candidate, false), bucket(candidate, true), matchScore,
+                      matchScore * 13 + semanticContextScore(*result) * 7};
     ranked.push_back(candidate);
   }
   matched = ranked.size();
-  // SourceKit moves the best non-literal results above untyped literals, so filtering demotes them.
-  const bool filtering = !filter.empty();
-  auto bucket = [filtering](const RankedResult &result, bool skip) {
-    Bucket value = bucketFor(result, skip);
-    return filtering && value == Bucket::Literal ? Bucket::Normal : value;
-  };
-  std::stable_sort(ranked.begin(), ranked.end(), [&](const RankedResult &a, const RankedResult &b) {
-    for (bool skip : {false, true}) {
-      Bucket left = bucket(a, skip);
-      Bucket right = bucket(b, skip);
-      if (left != right) {
-        return left > right;
-      }
-    }
-    if (a.score != b.score) {
-      return a.score > b.score;
-    }
-    if (int order = a.name.compare_insensitive(b.name)) {
-      return order < 0;
-    }
-    return a.name.size() < b.name.size();
-  });
+  std::stable_sort(ranked.begin(), ranked.end(),
+                   [filtering](const RankedResult &a, const RankedResult &b) {
+                     return swift_toolchain::completionRanksBefore(a.rank, b.rank, filtering);
+                   });
   if (ranked.size() > maximumResults) {
     ranked.resize(maximumResults);
   }
