@@ -1,6 +1,8 @@
 #include "CompilerBackend.h"
+#include "CompletionRanking.h"
 #include "SemanticSupport.h"
 #include "SwiftCompilerBridge.h"
+#include "swift/AST/Attr.h"
 #include "swift/AST/DiagnosticConsumer.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/PluginRegistry.h"
@@ -169,18 +171,7 @@ const char *completionKindName(CompletionKind kind) {
   }
 }
 
-/// SourceKit's ordering groups, from least to most preferred.
-enum class Bucket {
-  NotRecommended,
-  Normal,
-  Literal,
-  NormalTypeMatch,
-  LiteralTypeMatch,
-  HighPriorityKeyword,
-  Operator,
-  ExpressionSpecific,
-  ExactMatch,
-};
+using Bucket = swift_toolchain::CompletionBucket;
 
 /// One candidate with the values the ranking compares.
 struct RankedResult {
@@ -188,12 +179,10 @@ struct RankedResult {
   CodeCompletionResult *result;
   /// The filter name used for matching and name ordering.
   llvm::StringRef name;
-  /// The normalized fuzzy-match score in the range from zero to one.
-  double matchScore;
-  /// The weighted match and semantic context score.
-  double score;
-  /// Whether the filter equals the name ignoring case.
+  /// Whether the filter equals the name's base name ignoring case.
   bool exactMatch;
+  /// The groups and scores that order the candidate.
+  swift_toolchain::CompletionRank rank;
 };
 
 /// Keywords that SourceKit promotes at statement starts.
@@ -213,12 +202,51 @@ bool isHighPriorityKeyword(swift::ide::CodeCompletionKeywordKind kind) {
   }
 }
 
+/// Returns whether a keyword result introduces a type, such as `struct` or `actor`.
+///
+/// The set matches `isTypeDeclIntroducer` in the compiler's `addDeclKeywords`. The compiler offers
+/// `actor` without a keyword kind and gives it the flags of `class`.
+bool isTypeIntroducer(const CodeCompletionResult &result) {
+  using swift::ide::CodeCompletionKeywordKind;
+  switch (result.getKeywordKind()) {
+  case CodeCompletionKeywordKind::kw_protocol:
+  case CodeCompletionKeywordKind::kw_class:
+  case CodeCompletionKeywordKind::kw_struct:
+  case CodeCompletionKeywordKind::kw_enum:
+  case CodeCompletionKeywordKind::kw_extension:
+    return true;
+  case CodeCompletionKeywordKind::None:
+    return llvm::StringRef(result.getFilterName()) == "actor";
+  default:
+    return false;
+  }
+}
+
+/// Returns whether a keyword result is a declaration keyword or a declaration attribute.
+///
+/// `TokenKinds.def` lists the declaration keywords. The compiler offers a contextual modifier such
+/// as `prefix` without a keyword kind. Its name then matches a declaration attribute spelling
+/// instead. The spellings also match a few keywords that start no declaration, such as `async`
+/// after a parameter list and `borrowing` in a parameter type.
+bool isDeclarationKeyword(const CodeCompletionResult &result) {
+  using swift::ide::CodeCompletionKeywordKind;
+  switch (result.getKeywordKind()) {
+#define DECL_KEYWORD(kw) case CodeCompletionKeywordKind::kw_##kw:
+#include "swift/AST/TokenKinds.def"
+    return true;
+  case CodeCompletionKeywordKind::None:
+    return swift::DeclAttribute::getAttrKindFromString(llvm::StringRef(result.getFilterName()))
+        .has_value();
+  default:
+    return false;
+  }
+}
+
 /// A simplified port of SourceKit's result buckets without popularity data.
+///
+/// `completionBucket` adds the exact-match group afterwards.
 Bucket bucketFor(const RankedResult &ranked, bool skipMetaGroups) {
   const CodeCompletionResult &result = *ranked.result;
-  if (ranked.exactMatch && !skipMetaGroups) {
-    return Bucket::ExactMatch;
-  }
   if (result.isNotRecommended() && !skipMetaGroups) {
     return Bucket::NotRecommended;
   }
@@ -257,33 +285,61 @@ Bucket bucketFor(const RankedResult &ranked, bool skipMetaGroups) {
   return Bucket::Normal;
 }
 
-/// SourceKit's semantic context score without import-depth data.
+/// Copies the compiler's flags that scale a result's score.
+///
+/// `bucketFor` reads the other flags for the expression-specific group.
+swift_toolchain::CompletionFlair flairFor(const CodeCompletionResult &result) {
+  auto flair = result.getFlair();
+  swift_toolchain::CompletionFlair copied;
+  copied.commonKeywordAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::CommonKeywordAtCurrentPosition);
+  copied.rareKeywordAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::RareKeywordAtCurrentPosition);
+  copied.rareTypeAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::RareTypeAtCurrentPosition);
+  copied.expressionAtNonScriptOrMainFileScope =
+      flair.contains(CodeCompletionFlairBit::ExpressionAtNonScriptOrMainFileScope);
+  return copied;
+}
+
+/// Returns the semantic context score of a result from the ranking's table.
 double semanticContextScore(const CodeCompletionResult &result) {
-  double order = 8.0;
+  using swift_toolchain::CompletionKeyword;
+  using swift_toolchain::CompletionSemanticContext;
+  CompletionSemanticContext context = CompletionSemanticContext::None;
   switch (result.getSemanticContext()) {
   case SemanticContextKind::Local:
-    order = 1;
+    context = CompletionSemanticContext::Local;
     break;
   case SemanticContextKind::CurrentNominal:
-    order = 2;
+    context = CompletionSemanticContext::CurrentNominal;
     break;
   case SemanticContextKind::Super:
-    order = 3;
+    context = CompletionSemanticContext::Super;
     break;
   case SemanticContextKind::OutsideNominal:
-    order = 4;
+    context = CompletionSemanticContext::OutsideNominal;
     break;
   case SemanticContextKind::CurrentModule:
-    order = 5;
+    context = CompletionSemanticContext::CurrentModule;
     break;
   case SemanticContextKind::OtherModule:
-    order = 6.5;
+    context = CompletionSemanticContext::OtherModule;
     break;
   case SemanticContextKind::None:
-    order = result.getKind() == CodeCompletionResultKind::Keyword ? 5.5 : 8.0;
+    context = CompletionSemanticContext::None;
     break;
   }
-  return (8.0 - order) / 8.0;
+  CompletionKeyword keyword = CompletionKeyword::NotKeyword;
+  if (result.getKind() == CodeCompletionResultKind::Keyword) {
+    // A type-introducing keyword keeps the keyword score because the compiler flags it as rare
+    // wherever it does not fit. At the top level of `main.swift`, it gets no flag at all.
+    const bool promoted =
+        isHighPriorityKeyword(result.getKeywordKind()) || isTypeIntroducer(result);
+    keyword = !promoted && isDeclarationKeyword(result) ? CompletionKeyword::DeclarationKeyword
+                                                        : CompletionKeyword::Keyword;
+  }
+  return swift_toolchain::completionSemanticScore(context, keyword);
 }
 
 /// Prints one completion string through a caller-provided printer.
@@ -305,7 +361,9 @@ void configureContext(swift::ide::CodeCompletionContext &context) {
 /// Filters, ranks, and serializes the results while the compiler instance keeps them alive.
 ///
 /// An unfiltered list leaves out results that are not recommended or have an invalid type, as
-/// SourceKit does. A filtered list keeps them and ranks them last.
+/// SourceKit does. A filtered list keeps them and ranks them last unless they match exactly. The
+/// cut to `maximumResults` follows the ranking. A filtered list therefore keeps its exact matches
+/// and its best fuzzy matches.
 void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *> &results,
                   llvm::StringRef filter, uint32_t maximumResults, size_t &matched,
                   size_t &hidden) {
@@ -313,10 +371,17 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
   ranked.reserve(results.size());
   swift::ide::FuzzyStringMatcher matcher(filter);
   matcher.normalize = true;
+  // SourceKit moves the best non-literal results above untyped literals, so filtering demotes them.
+  const bool filtering = !filter.empty();
+  auto bucket = [filtering](const RankedResult &result, bool skip) {
+    Bucket value = bucketFor(result, skip);
+    return filtering && value == Bucket::Literal ? Bucket::Normal : value;
+  };
   for (CodeCompletionResult *result : results) {
     llvm::StringRef name = result->getFilterName();
-    RankedResult candidate{result, name, 0.0, 0.0, false};
-    if (filter.empty()) {
+    RankedResult candidate{result, name, false, {}};
+    double matchScore = 0.0;
+    if (!filtering) {
       if (result->isNotRecommended() ||
           result->getExpectedTypeRelation() == CodeCompletionResultTypeRelation::Invalid) {
         ++hidden;
@@ -328,35 +393,27 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
       if (!match) {
         continue;
       }
-      candidate.matchScore = matcher.scoreCandidate(name);
-      candidate.exactMatch = name.equals_insensitive(filter);
+      matchScore = matcher.scoreCandidate(name);
+      // The argument labels would lower the score of a function against a shorter keyword.
+      const llvm::StringRef base(swift_toolchain::completionBaseName(name));
+      if (base.size() < name.size() && matcher.matchesCandidate(base)) {
+        matchScore = std::max(matchScore, matcher.scoreCandidate(base));
+      }
+      candidate.exactMatch = swift_toolchain::completionMatchesExactly(name, filter);
     }
-    candidate.score = candidate.matchScore * 13 + semanticContextScore(*result) * 7;
+    const Bucket group = bucket(candidate, false);
+    candidate.rank = {name, swift_toolchain::completionBucket(group, candidate.exactMatch),
+                      bucket(candidate, true),
+                      swift_toolchain::completionScore(matchScore, semanticContextScore(*result),
+                                                       flairFor(*result)),
+                      group == Bucket::NotRecommended};
     ranked.push_back(candidate);
   }
   matched = ranked.size();
-  // SourceKit moves the best non-literal results above untyped literals, so filtering demotes them.
-  const bool filtering = !filter.empty();
-  auto bucket = [filtering](const RankedResult &result, bool skip) {
-    Bucket value = bucketFor(result, skip);
-    return filtering && value == Bucket::Literal ? Bucket::Normal : value;
-  };
-  std::stable_sort(ranked.begin(), ranked.end(), [&](const RankedResult &a, const RankedResult &b) {
-    for (bool skip : {false, true}) {
-      Bucket left = bucket(a, skip);
-      Bucket right = bucket(b, skip);
-      if (left != right) {
-        return left > right;
-      }
-    }
-    if (a.score != b.score) {
-      return a.score > b.score;
-    }
-    if (int order = a.name.compare_insensitive(b.name)) {
-      return order < 0;
-    }
-    return a.name.size() < b.name.size();
-  });
+  std::stable_sort(ranked.begin(), ranked.end(),
+                   [filtering](const RankedResult &a, const RankedResult &b) {
+                     return swift_toolchain::completionRanksBefore(a.rank, b.rank, filtering);
+                   });
   if (ranked.size() > maximumResults) {
     ranked.resize(maximumResults);
   }
