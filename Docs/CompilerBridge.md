@@ -131,13 +131,13 @@ score comes first, and the result groups order equal scores. The list keeps the 
 results from the top of that order.
 
 The score adds the semantic context to the fuzzy match. A local name therefore precedes a global
-name with a slightly closer match. A declaration keyword or modifier, such as `struct` or `prefix`,
-scores as a declaration from an imported module. Other keywords keep SourceKit's higher score. For
-example, `switch` leads the SDK names on `s`. The compiler's flags for the cursor position then
-scale the score by the factors of the `CompletionScoring` module in sourcekit-lsp. For example,
-`private` keeps three quarters of its score in a function body. A function matches at least as well
-as its base name alone. Its argument labels then don't rank it below a shorter keyword, such as
-`private` for `pri`.
+name with a slightly closer match. A modifier or a declaration keyword that introduces no type, such
+as `private` or `prefix`, scores as a declaration from an imported module. Other keywords keep
+SourceKit's higher score. For example, `switch` and `struct` lead the SDK names on `s` at the top
+level of `main.swift`. The compiler's flags for the cursor position then scale the score by the
+factors of the `CompletionScoring` module in sourcekit-lsp. For example, `private` keeps three
+quarters of its score in a function body. A function matches at least as well as its base name
+alone. Its argument labels then don't rank it below a shorter keyword, such as `private` for `pri`.
 
 ## Annotation
 

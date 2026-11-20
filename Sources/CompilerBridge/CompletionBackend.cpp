@@ -202,21 +202,41 @@ bool isHighPriorityKeyword(swift::ide::CodeCompletionKeywordKind kind) {
   }
 }
 
-/// Returns whether a keyword result starts a declaration, such as `struct` or `prefix`.
+/// Returns whether a keyword result introduces a type, such as `struct` or `actor`.
+///
+/// The set matches `isTypeDeclIntroducer` in the compiler's `addDeclKeywords`. The compiler offers
+/// `actor` without a keyword kind and gives it the flags of `class`.
+bool isTypeIntroducer(const CodeCompletionResult &result) {
+  using swift::ide::CodeCompletionKeywordKind;
+  switch (result.getKeywordKind()) {
+  case CodeCompletionKeywordKind::kw_protocol:
+  case CodeCompletionKeywordKind::kw_class:
+  case CodeCompletionKeywordKind::kw_struct:
+  case CodeCompletionKeywordKind::kw_enum:
+  case CodeCompletionKeywordKind::kw_extension:
+    return true;
+  case CodeCompletionKeywordKind::None:
+    return llvm::StringRef(result.getFilterName()) == "actor";
+  default:
+    return false;
+  }
+}
+
+/// Returns whether a keyword result is a declaration keyword or a declaration attribute.
 ///
 /// `TokenKinds.def` lists the declaration keywords. The compiler offers a contextual modifier such
 /// as `prefix` without a keyword kind. Its name then matches a declaration attribute spelling
-/// instead. The compiler adds `actor` by hand because it is neither.
+/// instead. The spellings also match a few keywords that start no declaration, such as `async`
+/// after a parameter list and `borrowing` in a parameter type.
 bool isDeclarationKeyword(const CodeCompletionResult &result) {
   using swift::ide::CodeCompletionKeywordKind;
   switch (result.getKeywordKind()) {
 #define DECL_KEYWORD(kw) case CodeCompletionKeywordKind::kw_##kw:
 #include "swift/AST/TokenKinds.def"
     return true;
-  case CodeCompletionKeywordKind::None: {
-    const llvm::StringRef name = result.getFilterName();
-    return name == "actor" || swift::DeclAttribute::getAttrKindFromString(name).has_value();
-  }
+  case CodeCompletionKeywordKind::None:
+    return swift::DeclAttribute::getAttrKindFromString(llvm::StringRef(result.getFilterName()))
+        .has_value();
   default:
     return false;
   }
@@ -312,9 +332,12 @@ double semanticContextScore(const CodeCompletionResult &result) {
   }
   CompletionKeyword keyword = CompletionKeyword::NotKeyword;
   if (result.getKind() == CodeCompletionResultKind::Keyword) {
-    keyword = !isHighPriorityKeyword(result.getKeywordKind()) && isDeclarationKeyword(result)
-                  ? CompletionKeyword::DeclarationKeyword
-                  : CompletionKeyword::Keyword;
+    // A type-introducing keyword keeps the keyword score because the compiler flags it as rare
+    // wherever it does not fit. At the top level of `main.swift`, it gets no flag at all.
+    const bool promoted =
+        isHighPriorityKeyword(result.getKeywordKind()) || isTypeIntroducer(result);
+    keyword = !promoted && isDeclarationKeyword(result) ? CompletionKeyword::DeclarationKeyword
+                                                        : CompletionKeyword::Keyword;
   }
   return swift_toolchain::completionSemanticScore(context, keyword);
 }

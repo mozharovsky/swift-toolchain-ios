@@ -1,5 +1,6 @@
 #include "CompletionRanking.h"
 #include <algorithm>
+#include <cstddef>
 #include <cstdio>
 #include <string_view>
 #include <vector>
@@ -196,12 +197,13 @@ struct TypedCandidate {
   double match;
   /// The keyword kind. A result that is not a keyword is a declaration from an imported module.
   swift_toolchain::CompletionKeyword keyword;
+  /// Whether the compiler marks the keyword as rare in a function body.
+  ///
+  /// At the top level of `main.swift`, the compiler sets no flags.
+  bool rareInFunctionBody = false;
 };
 
 /// Ranks the typed candidates in a function body or at the top level of `main.swift`.
-///
-/// In a function body, the compiler marks each declaration keyword of these checks as rare. At the
-/// top level of `main.swift`, it sets no flags.
 std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &candidates,
                                           bool functionBody) {
   using swift_toolchain::CompletionKeyword;
@@ -209,8 +211,7 @@ std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &can
   std::vector<CompletionRank> results;
   for (const TypedCandidate &candidate : candidates) {
     swift_toolchain::CompletionFlair flair;
-    flair.rareKeywordAtCurrentPosition =
-        functionBody && candidate.keyword == CompletionKeyword::DeclarationKeyword;
+    flair.rareKeywordAtCurrentPosition = functionBody && candidate.rareInFunctionBody;
     const CompletionSemanticContext context = candidate.keyword == CompletionKeyword::NotKeyword
                                                   ? CompletionSemanticContext::OtherModule
                                                   : CompletionSemanticContext::None;
@@ -221,36 +222,42 @@ std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &can
   return ranked(results, true, results.size());
 }
 
-/// `print` comes first on `pri` and within the first two results on `pr` against the matching
-/// declaration keywords.
+/// Returns whether a name is among the first `count` names.
+bool isAmongFirst(const std::vector<std::string_view> &names, std::string_view name, size_t count) {
+  const auto end = names.begin() + static_cast<std::ptrdiff_t>(std::min(count, names.size()));
+  return std::find(names.begin(), end, name) != end;
+}
+
+/// `print` comes first on `pri` against the matching declaration keywords and SDK names.
 ///
-/// The match scores come from the pinned `FuzzyStringMatcher`. A function matches at least as well
-/// as its base name. `print` therefore carries the score of `print` alone.
+/// On `pr`, `print` is among the first two in a function body and among the first three at the top
+/// level of `main.swift`. There, `protocol` keeps the keyword score, and `pread` ties `print` on
+/// the match and precedes it by name. The match scores come from the pinned `FuzzyStringMatcher`.
+/// A function matches at least as well as its base name. `print` therefore carries the score of
+/// `print` alone.
 void checkTypedPrint() {
   using swift_toolchain::CompletionKeyword;
   const std::vector<TypedCandidate> pri{
-      {"private", 0.898038, CompletionKeyword::DeclarationKeyword},
+      {"private", 0.898038, CompletionKeyword::DeclarationKeyword, true},
       {"print(_:separator:terminator:)", 0.901354, CompletionKeyword::NotKeyword},
   };
   const std::vector<TypedCandidate> pr{
-      {"prefix", 0.886644, CompletionKeyword::DeclarationKeyword},
-      {"private", 0.885041, CompletionKeyword::DeclarationKeyword},
-      {"protocol", 0.883838, CompletionKeyword::DeclarationKeyword},
-      {"precedencegroup", 0.879910, CompletionKeyword::DeclarationKeyword},
+      {"prefix", 0.886644, CompletionKeyword::DeclarationKeyword, true},
+      {"private", 0.885041, CompletionKeyword::DeclarationKeyword, true},
+      {"protocol", 0.883838, CompletionKeyword::Keyword, true},
+      {"precedencegroup", 0.879910, CompletionKeyword::DeclarationKeyword, true},
+      {"pread(_:_:_:_:)", 0.888889, CompletionKeyword::NotKeyword},
       {"print(_:separator:terminator:)", 0.888889, CompletionKeyword::NotKeyword},
   };
-  for (bool functionBody : {true, false}) {
-    const auto onPri = rankedTyped(pri, functionBody);
-    expect(onPri.front() == "print(_:separator:terminator:)",
-           functionBody ? "`print` must come first on `pri` in a function body."
-                        : "`print` must come first on `pri` at the top level of main.swift.");
-    const auto onPr = rankedTyped(pr, functionBody);
-    expect(std::find(onPr.begin(), onPr.begin() + 2, "print(_:separator:terminator:)") !=
-               onPr.begin() + 2,
-           functionBody ? "`print` must be among the first two results on `pr` in a function body."
-                        : "`print` must be among the first two results on `pr` at the top level of "
-                          "main.swift.");
-  }
+  const std::string_view print = "print(_:separator:terminator:)";
+  expect(rankedTyped(pri, true).front() == print,
+         "`print` must come first on `pri` in a function body.");
+  expect(rankedTyped(pri, false).front() == print,
+         "`print` must come first on `pri` at the top level of main.swift.");
+  expect(isAmongFirst(rankedTyped(pr, true), print, 2),
+         "`print` must be among the first two results on `pr` in a function body.");
+  expect(isAmongFirst(rankedTyped(pr, false), print, 3),
+         "`print` must be among the first three results on `pr` at the top level of main.swift.");
 }
 
 /// A statement keyword comes first on its first letter in a free function body.
@@ -264,12 +271,12 @@ void checkOneLetterKeywords() {
       {
           {"Set", 0.666556, CompletionKeyword::NotKeyword},
           {"sin(_:)", 0.666556, CompletionKeyword::NotKeyword},
-          {"struct", 0.666500, CompletionKeyword::DeclarationKeyword},
+          {"struct", 0.666500, CompletionKeyword::Keyword, true},
           {"switch", 0.666500, CompletionKeyword::Keyword},
       },
       {
           {"cos(_:)", 0.666556, CompletionKeyword::NotKeyword},
-          {"class", 0.666511, CompletionKeyword::DeclarationKeyword},
+          {"class", 0.666511, CompletionKeyword::Keyword, true},
           {"continue", 0.666486, CompletionKeyword::Keyword},
       },
       {
@@ -291,6 +298,22 @@ void checkOneLetterKeywords() {
   }
 }
 
+/// `struct` precedes the SDK names on `s` at the top level of `main.swift`.
+///
+/// The compiler sets no flags there. A type-introducing keyword therefore keeps the keyword score.
+void checkTopLevelTypeKeyword() {
+  using swift_toolchain::CompletionKeyword;
+  const std::vector<TypedCandidate> candidates{
+      {"Set", 0.666556, CompletionKeyword::NotKeyword},
+      {"sin(_:)", 0.666556, CompletionKeyword::NotKeyword},
+      {"switch", 0.666500, CompletionKeyword::Keyword},
+      {"struct", 0.666500, CompletionKeyword::Keyword, true},
+  };
+  const auto names = rankedTyped(candidates, false);
+  expect(isAmongFirst(names, "struct", 2),
+         "`struct` must precede the SDK names on `s` at the top level of main.swift.");
+}
+
 } // namespace
 
 int main() {
@@ -303,5 +326,6 @@ int main() {
   checkFlair();
   checkTypedPrint();
   checkOneLetterKeywords();
+  checkTopLevelTypeKeyword();
   return failures == 0 ? 0 : 1;
 }
