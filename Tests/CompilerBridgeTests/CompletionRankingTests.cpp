@@ -117,28 +117,140 @@ void checkSemanticContext() {
          "A much closer match must precede a local name.");
 }
 
-/// A result that is not recommended stays last when its base name matches the filter exactly.
+/// An exact match that is not recommended survives the cut after the recommended exact matches.
 void checkNotRecommendedExactMatch() {
   using swift_toolchain::completionBucket;
   expect(completionBucket(CompletionBucket::Normal, true) == CompletionBucket::ExactMatch &&
              completionBucket(CompletionBucket::ExpressionSpecific, true) ==
+                 CompletionBucket::ExactMatch &&
+             completionBucket(CompletionBucket::NotRecommended, true) ==
                  CompletionBucket::ExactMatch,
-         "An exact match must move a recommended result into the exact-match group.");
-  expect(completionBucket(CompletionBucket::NotRecommended, true) ==
-             CompletionBucket::NotRecommended,
-         "An exact match must leave a result that is not recommended in its group.");
+         "An exact match must move every result into the exact-match group.");
   expect(completionBucket(CompletionBucket::Normal, false) == CompletionBucket::Normal,
          "A result without an exact match must keep its group.");
 
-  const std::vector<CompletionRank> results{
-      {"print(_:separator:terminator:)", completionBucket(CompletionBucket::NotRecommended, true),
-       CompletionBucket::Normal, 19.0},
-      {"printer", completionBucket(CompletionBucket::Normal, false), CompletionBucket::Normal,
-       10.0},
+  std::vector<CompletionRank> results;
+  for (std::string_view name : {"printer", "printed", "printLog(_:)"}) {
+    results.push_back(
+        {name, completionBucket(CompletionBucket::Normal, false), CompletionBucket::Normal, 20.0});
+  }
+  results.push_back({"print(_:)", completionBucket(CompletionBucket::NotRecommended, true),
+                     CompletionBucket::Normal, 19.0, true});
+  results.push_back({"print(_:separator:terminator:)",
+                     completionBucket(CompletionBucket::Normal, true), CompletionBucket::Normal,
+                     18.0});
+  results.push_back({"print(_:separator:terminator:to:)",
+                     completionBucket(CompletionBucket::Normal, true), CompletionBucket::Normal,
+                     17.0});
+
+  const auto filtered = ranked(results, true, 3);
+  expect(filtered.size() == 3 && filtered[0] == "print(_:separator:terminator:)" &&
+             filtered[1] == "print(_:separator:terminator:to:)" && filtered[2] == "print(_:)",
+         "An exact match that is not recommended must survive the cut after the recommended exact "
+         "matches.");
+}
+
+/// A keyword without high priority scores as a declaration from an imported module.
+void checkKeywordSemanticScore() {
+  using swift_toolchain::CompletionKeyword;
+  using swift_toolchain::CompletionSemanticContext;
+  using swift_toolchain::completionSemanticScore;
+  const double imported = completionSemanticScore(CompletionSemanticContext::OtherModule,
+                                                  CompletionKeyword::NotKeyword);
+  expect(completionSemanticScore(CompletionSemanticContext::None, CompletionKeyword::Keyword) ==
+             imported,
+         "A keyword must not score above a declaration from an imported module.");
+  expect(completionSemanticScore(CompletionSemanticContext::None,
+                                 CompletionKeyword::HighPriorityKeyword) > imported,
+         "A high-priority keyword must score above a declaration from an imported module.");
+  expect(completionSemanticScore(CompletionSemanticContext::None, CompletionKeyword::NotKeyword) ==
+             0.0,
+         "A result without a semantic context must score zero unless it is a keyword.");
+}
+
+/// The compiler's flags scale the score by the factors of sourcekit-lsp's `CompletionScoring`.
+void checkFlair() {
+  using swift_toolchain::CompletionFlair;
+  using swift_toolchain::completionScore;
+  const double plain = completionScore(0.5, 0.5);
+  CompletionFlair common;
+  common.commonKeywordAtCurrentPosition = true;
+  CompletionFlair rare;
+  rare.rareKeywordAtCurrentPosition = true;
+  rare.rareTypeAtCurrentPosition = true;
+  CompletionFlair invalid;
+  invalid.expressionAtNonScriptOrMainFileScope = true;
+  expect(completionScore(0.5, 0.5, common) == plain * 1.25,
+         "A common keyword must gain a quarter of its score.");
+  expect(completionScore(0.5, 0.5, rare) == plain * 0.75 * 0.75,
+         "Each rare flag must keep three quarters of the score.");
+  expect(completionScore(0.5, 0.5, invalid) == plain * 0.125,
+         "A statement at the top level of a library file must keep an eighth of its score.");
+}
+
+/// One candidate of the typed `print` check with its normalized fuzzy-match score.
+struct TypedCandidate {
+  /// The compiler's filter name.
+  std::string_view name;
+  /// The score of the pinned `FuzzyStringMatcher` with normalization for the typed filter.
+  double match;
+  /// Whether the result is a keyword. Only a keyword gets a rare flag in a function body.
+  bool keyword;
+};
+
+/// Ranks the typed candidates in a function body or at the top level of `main.swift`.
+///
+/// In a function body, the compiler marks each of these keywords as rare. At the top level of
+/// `main.swift`, it sets no flags.
+std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &candidates,
+                                          bool functionBody) {
+  using swift_toolchain::CompletionKeyword;
+  using swift_toolchain::CompletionSemanticContext;
+  std::vector<CompletionRank> results;
+  for (const TypedCandidate &candidate : candidates) {
+    swift_toolchain::CompletionFlair flair;
+    flair.rareKeywordAtCurrentPosition = functionBody && candidate.keyword;
+    const double semantic =
+        candidate.keyword
+            ? swift_toolchain::completionSemanticScore(CompletionSemanticContext::None,
+                                                       CompletionKeyword::Keyword)
+            : swift_toolchain::completionSemanticScore(CompletionSemanticContext::OtherModule,
+                                                       CompletionKeyword::NotKeyword);
+    results.push_back({candidate.name, CompletionBucket::Normal, CompletionBucket::Normal,
+                       swift_toolchain::completionScore(candidate.match, semantic, flair)});
+  }
+  return ranked(results, true, results.size());
+}
+
+/// `print` comes first on `pri` and within the first two results on `pr` against the matching
+/// declaration keywords.
+///
+/// The match scores come from the pinned `FuzzyStringMatcher`. A function matches at least as well
+/// as its base name. `print` therefore carries the score of `print` alone.
+void checkTypedPrint() {
+  const std::vector<TypedCandidate> pri{
+      {"private", 0.898038, true},
+      {"print(_:separator:terminator:)", 0.901354, false},
   };
-  const auto filtered = ranked(results, true, 1);
-  expect(filtered.size() == 1 && filtered[0] == "printer",
-         "A recommended result must precede an exact match that is not recommended.");
+  const std::vector<TypedCandidate> pr{
+      {"prefix", 0.886644, true},
+      {"private", 0.885041, true},
+      {"protocol", 0.883838, true},
+      {"precedencegroup", 0.879910, true},
+      {"print(_:separator:terminator:)", 0.888889, false},
+  };
+  for (bool functionBody : {true, false}) {
+    const auto onPri = rankedTyped(pri, functionBody);
+    expect(onPri.front() == "print(_:separator:terminator:)",
+           functionBody ? "`print` must come first on `pri` in a function body."
+                        : "`print` must come first on `pri` at the top level of main.swift.");
+    const auto onPr = rankedTyped(pr, functionBody);
+    expect(std::find(onPr.begin(), onPr.begin() + 2, "print(_:separator:terminator:)") !=
+               onPr.begin() + 2,
+           functionBody ? "`print` must be among the first two results on `pr` in a function body."
+                        : "`print` must be among the first two results on `pr` at the top level of "
+                          "main.swift.");
+  }
 }
 
 } // namespace
@@ -149,5 +261,8 @@ int main() {
   checkTiers();
   checkSemanticContext();
   checkNotRecommendedExactMatch();
+  checkKeywordSemanticScore();
+  checkFlair();
+  checkTypedPrint();
   return failures == 0 ? 0 : 1;
 }

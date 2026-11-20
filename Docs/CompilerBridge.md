@@ -122,16 +122,21 @@ Each item carries `name`, `description`, `kind`, `type`, `sourceText`, `typeRela
 `module`, `brief`, and `notRecommended`. `sourceText` uses Xcode's placeholder syntax, such as
 `<#T##label: Int##Int#>`. Ranking follows SourceKit's result groups, fuzzy matching, and semantic
 context without popularity data. An unfiltered list leaves out results that are not recommended or
-have an invalid type, and a filtered list ranks them last.
+have an invalid type. A filtered list ranks them last unless they match exactly.
 
 A filtered list puts exact matches first. An exact match compares the filter with the base name.
-For example, `print` matches `print(_:separator:terminator:)` exactly. A result that is not
-recommended stays last even when it matches exactly. Between those two groups, a higher score
-comes first, and the result groups order equal scores. The score adds the semantic context to the fuzzy match.
-A local name therefore precedes a global name with a slightly closer match. A function matches at
-least as well as its base name alone. Its argument labels then don't rank it below a shorter
-keyword, such as `private` for `pri`. The list keeps the requested number of results from the top
-of that order.
+For example, `print` matches `print(_:separator:terminator:)` exactly. Recommended exact matches
+precede the others. Between the exact matches and the results that are not recommended, a higher
+score comes first, and the result groups order equal scores. The list keeps the requested number of
+results from the top of that order.
+
+The score adds the semantic context to the fuzzy match. A local name therefore precedes a global
+name with a slightly closer match. A keyword scores as a declaration from an imported module
+unless SourceKit promotes it at statement starts. The compiler's flags for the cursor position then
+scale the score by the factors of the `CompletionScoring` module in sourcekit-lsp. For example,
+`private` keeps three quarters of its score in a function body. A function matches at least as well
+as its base name alone. Its argument labels then don't rank it below a shorter keyword, such as
+`private` for `pri`.
 
 ## Annotation
 

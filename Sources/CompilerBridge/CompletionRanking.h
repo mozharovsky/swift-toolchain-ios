@@ -18,6 +18,42 @@ enum class CompletionBucket {
   ExactMatch,
 };
 
+/// The compiler's semantic context of a result, from the nearest declaration to no declaration.
+enum class CompletionSemanticContext {
+  Local,
+  CurrentNominal,
+  Super,
+  OutsideNominal,
+  CurrentModule,
+  OtherModule,
+  None,
+};
+
+/// The kind of keyword that a result inserts.
+///
+/// It decides the semantic context score of a result without a semantic context.
+enum class CompletionKeyword {
+  NotKeyword,
+  Keyword,
+  /// A keyword that SourceKit promotes at statement starts, such as `let` or `return`.
+  HighPriorityKeyword,
+};
+
+/// The compiler's flags that make a result more or less likely at the completion position.
+struct CompletionFlair {
+  /// A keyword that often starts a declaration here, such as `struct` at the top level of a
+  /// library file.
+  bool commonKeywordAtCurrentPosition = false;
+  /// A keyword that rarely fits here, such as `private` in a function body.
+  bool rareKeywordAtCurrentPosition = false;
+  /// A type that rarely fits here, such as a protocol name in an expression.
+  bool rareTypeAtCurrentPosition = false;
+  /// A declaration that would start a statement at the top level of a library file.
+  ///
+  /// Only `main.swift` and scripts allow top-level statements.
+  bool expressionAtNonScriptOrMainFileScope = false;
+};
+
 /// The values that order one completion result in the list that the completion backend returns.
 ///
 /// The backend computes them from the compiler's result. The ranking itself needs no compiler, so
@@ -29,10 +65,12 @@ struct CompletionRank {
   CompletionBucket bucket;
   /// The group without the meta groups, which orders results within one meta group.
   CompletionBucket baseBucket;
-  /// The weighted sum of the fuzzy-match score and the semantic context score.
-  ///
-  /// See `completionScore`.
+  /// The score from `completionScore`.
   double score;
+  /// Whether the compiler marks the result as not recommended or its type as invalid.
+  ///
+  /// An exact match keeps this mark in the exact-match group, after the recommended exact matches.
+  bool notRecommended = false;
 };
 
 /// Returns the base name of a completion's filter name.
@@ -49,21 +87,29 @@ std::string_view completionBaseName(std::string_view filterName);
 /// \param filter The identifier prefix that the person typed.
 bool completionMatchesExactly(std::string_view filterName, std::string_view filter);
 
-/// Returns the score that orders filtered results between the exact matches and the results that
-/// are not recommended.
+/// Returns the semantic context score from zero for a global name to one for a local name.
 ///
-/// The match weighs more than the semantic context.
+/// The score follows SourceKit's table without import-depth data. A result without a semantic
+/// context scores zero unless it is a keyword. A high-priority keyword scores between the current
+/// module and an imported module, as in SourceKit. Any other keyword scores as a declaration from
+/// an imported module. A closer match of such a declaration therefore precedes the keyword.
+double completionSemanticScore(CompletionSemanticContext context, CompletionKeyword keyword);
+
+/// Returns the ranking score of a result.
+///
+/// The match weighs more than the semantic context. The compiler's flags then scale the weighted
+/// sum. For example, a rare keyword keeps three quarters of its score. See `completionRanksBefore`.
 ///
 /// \param matchScore The normalized fuzzy-match score from zero to one, or zero without a filter.
-/// \param semanticScore The semantic context score from zero for a global name to one for a local
-/// name.
-double completionScore(double matchScore, double semanticScore);
+/// \param semanticScore The score from `completionSemanticScore`.
+/// \param flair The compiler's flags for the result at the completion position.
+double completionScore(double matchScore, double semanticScore, const CompletionFlair &flair = {});
 
 /// Returns the group of a result once an exact match is known.
 ///
 /// The backend calls it for the group that includes SourceKit's other meta groups. An exact match
-/// moves a result into the exact-match group. A result that is not recommended stays in its group
-/// even when it matches exactly. A recommended result therefore precedes it.
+/// moves every result into the exact-match group, as in SourceKit. A result that is not recommended
+/// then follows the recommended exact matches. See `CompletionRank.notRecommended`.
 ///
 /// \param group The result's group, which may be `NotRecommended` or `ExpressionSpecific`.
 /// \param exactMatch Whether the typed filter is the result's base name.
@@ -72,9 +118,10 @@ CompletionBucket completionBucket(CompletionBucket group, bool exactMatch);
 /// Returns whether one result precedes another in a completion list.
 ///
 /// Without a filter, the groups decide first, then the score, then the name. With a filter, exact
-/// matches come first and results that are not recommended come last. Between them, the higher
-/// score comes first, and the groups decide between equal scores. The backend sorts by this order
-/// before it cuts the list to the requested size.
+/// matches come first and results that are not recommended come last. Recommended results precede
+/// the others within the exact matches. Then the higher score comes first, and the groups decide
+/// between equal scores. The backend sorts by this order before it cuts the list to the requested
+/// size.
 ///
 /// \param a The first result.
 /// \param b The second result.

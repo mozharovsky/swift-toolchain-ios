@@ -244,33 +244,58 @@ Bucket bucketFor(const RankedResult &ranked, bool skipMetaGroups) {
   return Bucket::Normal;
 }
 
-/// SourceKit's semantic context score without import-depth data.
+/// Copies the compiler's flags that scale a result's score.
+///
+/// `bucketFor` reads the other flags for the expression-specific group.
+swift_toolchain::CompletionFlair flairFor(const CodeCompletionResult &result) {
+  auto flair = result.getFlair();
+  swift_toolchain::CompletionFlair copied;
+  copied.commonKeywordAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::CommonKeywordAtCurrentPosition);
+  copied.rareKeywordAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::RareKeywordAtCurrentPosition);
+  copied.rareTypeAtCurrentPosition =
+      flair.contains(CodeCompletionFlairBit::RareTypeAtCurrentPosition);
+  copied.expressionAtNonScriptOrMainFileScope =
+      flair.contains(CodeCompletionFlairBit::ExpressionAtNonScriptOrMainFileScope);
+  return copied;
+}
+
+/// Returns the semantic context score of a result from the ranking's table.
 double semanticContextScore(const CodeCompletionResult &result) {
-  double order = 8.0;
+  using swift_toolchain::CompletionKeyword;
+  using swift_toolchain::CompletionSemanticContext;
+  CompletionSemanticContext context = CompletionSemanticContext::None;
   switch (result.getSemanticContext()) {
   case SemanticContextKind::Local:
-    order = 1;
+    context = CompletionSemanticContext::Local;
     break;
   case SemanticContextKind::CurrentNominal:
-    order = 2;
+    context = CompletionSemanticContext::CurrentNominal;
     break;
   case SemanticContextKind::Super:
-    order = 3;
+    context = CompletionSemanticContext::Super;
     break;
   case SemanticContextKind::OutsideNominal:
-    order = 4;
+    context = CompletionSemanticContext::OutsideNominal;
     break;
   case SemanticContextKind::CurrentModule:
-    order = 5;
+    context = CompletionSemanticContext::CurrentModule;
     break;
   case SemanticContextKind::OtherModule:
-    order = 6.5;
+    context = CompletionSemanticContext::OtherModule;
     break;
   case SemanticContextKind::None:
-    order = result.getKind() == CodeCompletionResultKind::Keyword ? 5.5 : 8.0;
+    context = CompletionSemanticContext::None;
     break;
   }
-  return (8.0 - order) / 8.0;
+  CompletionKeyword keyword = CompletionKeyword::NotKeyword;
+  if (result.getKind() == CodeCompletionResultKind::Keyword) {
+    keyword = isHighPriorityKeyword(result.getKeywordKind())
+                  ? CompletionKeyword::HighPriorityKeyword
+                  : CompletionKeyword::Keyword;
+  }
+  return swift_toolchain::completionSemanticScore(context, keyword);
 }
 
 /// Prints one completion string through a caller-provided printer.
@@ -292,8 +317,9 @@ void configureContext(swift::ide::CodeCompletionContext &context) {
 /// Filters, ranks, and serializes the results while the compiler instance keeps them alive.
 ///
 /// An unfiltered list leaves out results that are not recommended or have an invalid type, as
-/// SourceKit does. A filtered list keeps them and ranks them last. The cut to `maximumResults`
-/// follows the ranking. A filtered list therefore keeps its best fuzzy matches.
+/// SourceKit does. A filtered list keeps them and ranks them last unless they match exactly. The
+/// cut to `maximumResults` follows the ranking. A filtered list therefore keeps its exact matches
+/// and its best fuzzy matches.
 void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *> &results,
                   llvm::StringRef filter, uint32_t maximumResults, size_t &matched,
                   size_t &hidden) {
@@ -331,10 +357,12 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
       }
       candidate.exactMatch = swift_toolchain::completionMatchesExactly(name, filter);
     }
-    candidate.rank = {
-        name, swift_toolchain::completionBucket(bucket(candidate, false), candidate.exactMatch),
-        bucket(candidate, true),
-        swift_toolchain::completionScore(matchScore, semanticContextScore(*result))};
+    const Bucket group = bucket(candidate, false);
+    candidate.rank = {name, swift_toolchain::completionBucket(group, candidate.exactMatch),
+                      bucket(candidate, true),
+                      swift_toolchain::completionScore(matchScore, semanticContextScore(*result),
+                                                       flairFor(*result)),
+                      group == Bucket::NotRecommended};
     ranked.push_back(candidate);
   }
   matched = ranked.size();
