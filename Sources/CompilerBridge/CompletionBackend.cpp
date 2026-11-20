@@ -2,6 +2,7 @@
 #include "CompletionRanking.h"
 #include "SemanticSupport.h"
 #include "SwiftCompilerBridge.h"
+#include "swift/AST/Attr.h"
 #include "swift/AST/DiagnosticConsumer.h"
 #include "swift/AST/DiagnosticEngine.h"
 #include "swift/AST/PluginRegistry.h"
@@ -201,6 +202,26 @@ bool isHighPriorityKeyword(swift::ide::CodeCompletionKeywordKind kind) {
   }
 }
 
+/// Returns whether a keyword result starts a declaration, such as `struct` or `prefix`.
+///
+/// `TokenKinds.def` lists the declaration keywords. The compiler offers a contextual modifier such
+/// as `prefix` without a keyword kind. Its name then matches a declaration attribute spelling
+/// instead. The compiler adds `actor` by hand because it is neither.
+bool isDeclarationKeyword(const CodeCompletionResult &result) {
+  using swift::ide::CodeCompletionKeywordKind;
+  switch (result.getKeywordKind()) {
+#define DECL_KEYWORD(kw) case CodeCompletionKeywordKind::kw_##kw:
+#include "swift/AST/TokenKinds.def"
+    return true;
+  case CodeCompletionKeywordKind::None: {
+    const llvm::StringRef name = result.getFilterName();
+    return name == "actor" || swift::DeclAttribute::getAttrKindFromString(name).has_value();
+  }
+  default:
+    return false;
+  }
+}
+
 /// A simplified port of SourceKit's result buckets without popularity data.
 ///
 /// `completionBucket` adds the exact-match group afterwards.
@@ -291,8 +312,8 @@ double semanticContextScore(const CodeCompletionResult &result) {
   }
   CompletionKeyword keyword = CompletionKeyword::NotKeyword;
   if (result.getKind() == CodeCompletionResultKind::Keyword) {
-    keyword = isHighPriorityKeyword(result.getKeywordKind())
-                  ? CompletionKeyword::HighPriorityKeyword
+    keyword = !isHighPriorityKeyword(result.getKeywordKind()) && isDeclarationKeyword(result)
+                  ? CompletionKeyword::DeclarationKeyword
                   : CompletionKeyword::Keyword;
   }
   return swift_toolchain::completionSemanticScore(context, keyword);

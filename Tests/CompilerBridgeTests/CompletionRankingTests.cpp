@@ -150,19 +150,19 @@ void checkNotRecommendedExactMatch() {
          "matches.");
 }
 
-/// A keyword without high priority scores as a declaration from an imported module.
+/// A declaration keyword scores as a declaration from an imported module.
 void checkKeywordSemanticScore() {
   using swift_toolchain::CompletionKeyword;
   using swift_toolchain::CompletionSemanticContext;
   using swift_toolchain::completionSemanticScore;
   const double imported = completionSemanticScore(CompletionSemanticContext::OtherModule,
                                                   CompletionKeyword::NotKeyword);
-  expect(completionSemanticScore(CompletionSemanticContext::None, CompletionKeyword::Keyword) ==
-             imported,
-         "A keyword must not score above a declaration from an imported module.");
   expect(completionSemanticScore(CompletionSemanticContext::None,
-                                 CompletionKeyword::HighPriorityKeyword) > imported,
-         "A high-priority keyword must score above a declaration from an imported module.");
+                                 CompletionKeyword::DeclarationKeyword) == imported,
+         "A declaration keyword must not score above a declaration from an imported module.");
+  expect(completionSemanticScore(CompletionSemanticContext::None, CompletionKeyword::Keyword) >
+             imported,
+         "A statement keyword must score above a declaration from an imported module.");
   expect(completionSemanticScore(CompletionSemanticContext::None, CompletionKeyword::NotKeyword) ==
              0.0,
          "A result without a semantic context must score zero unless it is a keyword.");
@@ -188,20 +188,20 @@ void checkFlair() {
          "A statement at the top level of a library file must keep an eighth of its score.");
 }
 
-/// One candidate of the typed `print` check with its normalized fuzzy-match score.
+/// One candidate of a typed filter check with its normalized fuzzy-match score.
 struct TypedCandidate {
   /// The compiler's filter name.
   std::string_view name;
   /// The score of the pinned `FuzzyStringMatcher` with normalization for the typed filter.
   double match;
-  /// Whether the result is a keyword. Only a keyword gets a rare flag in a function body.
-  bool keyword;
+  /// The keyword kind. A result that is not a keyword is a declaration from an imported module.
+  swift_toolchain::CompletionKeyword keyword;
 };
 
 /// Ranks the typed candidates in a function body or at the top level of `main.swift`.
 ///
-/// In a function body, the compiler marks each of these keywords as rare. At the top level of
-/// `main.swift`, it sets no flags.
+/// In a function body, the compiler marks each declaration keyword of these checks as rare. At the
+/// top level of `main.swift`, it sets no flags.
 std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &candidates,
                                           bool functionBody) {
   using swift_toolchain::CompletionKeyword;
@@ -209,13 +209,12 @@ std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &can
   std::vector<CompletionRank> results;
   for (const TypedCandidate &candidate : candidates) {
     swift_toolchain::CompletionFlair flair;
-    flair.rareKeywordAtCurrentPosition = functionBody && candidate.keyword;
-    const double semantic =
-        candidate.keyword
-            ? swift_toolchain::completionSemanticScore(CompletionSemanticContext::None,
-                                                       CompletionKeyword::Keyword)
-            : swift_toolchain::completionSemanticScore(CompletionSemanticContext::OtherModule,
-                                                       CompletionKeyword::NotKeyword);
+    flair.rareKeywordAtCurrentPosition =
+        functionBody && candidate.keyword == CompletionKeyword::DeclarationKeyword;
+    const CompletionSemanticContext context = candidate.keyword == CompletionKeyword::NotKeyword
+                                                  ? CompletionSemanticContext::OtherModule
+                                                  : CompletionSemanticContext::None;
+    const double semantic = swift_toolchain::completionSemanticScore(context, candidate.keyword);
     results.push_back({candidate.name, CompletionBucket::Normal, CompletionBucket::Normal,
                        swift_toolchain::completionScore(candidate.match, semantic, flair)});
   }
@@ -228,16 +227,17 @@ std::vector<std::string_view> rankedTyped(const std::vector<TypedCandidate> &can
 /// The match scores come from the pinned `FuzzyStringMatcher`. A function matches at least as well
 /// as its base name. `print` therefore carries the score of `print` alone.
 void checkTypedPrint() {
+  using swift_toolchain::CompletionKeyword;
   const std::vector<TypedCandidate> pri{
-      {"private", 0.898038, true},
-      {"print(_:separator:terminator:)", 0.901354, false},
+      {"private", 0.898038, CompletionKeyword::DeclarationKeyword},
+      {"print(_:separator:terminator:)", 0.901354, CompletionKeyword::NotKeyword},
   };
   const std::vector<TypedCandidate> pr{
-      {"prefix", 0.886644, true},
-      {"private", 0.885041, true},
-      {"protocol", 0.883838, true},
-      {"precedencegroup", 0.879910, true},
-      {"print(_:separator:terminator:)", 0.888889, false},
+      {"prefix", 0.886644, CompletionKeyword::DeclarationKeyword},
+      {"private", 0.885041, CompletionKeyword::DeclarationKeyword},
+      {"protocol", 0.883838, CompletionKeyword::DeclarationKeyword},
+      {"precedencegroup", 0.879910, CompletionKeyword::DeclarationKeyword},
+      {"print(_:separator:terminator:)", 0.888889, CompletionKeyword::NotKeyword},
   };
   for (bool functionBody : {true, false}) {
     const auto onPri = rankedTyped(pri, functionBody);
@@ -253,6 +253,44 @@ void checkTypedPrint() {
   }
 }
 
+/// A statement keyword comes first on its first letter in a free function body.
+///
+/// The match scores come from the pinned `FuzzyStringMatcher`. The other names are the closest
+/// matches from the iOS SDK and the declaration keywords that the compiler offers there. A short
+/// name matches one typed letter slightly better than the keyword does.
+void checkOneLetterKeywords() {
+  using swift_toolchain::CompletionKeyword;
+  const std::vector<std::vector<TypedCandidate>> letters{
+      {
+          {"Set", 0.666556, CompletionKeyword::NotKeyword},
+          {"sin(_:)", 0.666556, CompletionKeyword::NotKeyword},
+          {"struct", 0.666500, CompletionKeyword::DeclarationKeyword},
+          {"switch", 0.666500, CompletionKeyword::Keyword},
+      },
+      {
+          {"cos(_:)", 0.666556, CompletionKeyword::NotKeyword},
+          {"class", 0.666511, CompletionKeyword::DeclarationKeyword},
+          {"continue", 0.666486, CompletionKeyword::Keyword},
+      },
+      {
+          {"tm", 0.666611, CompletionKeyword::NotKeyword},
+          {"tan(_:)", 0.666556, CompletionKeyword::NotKeyword},
+          {"throw", 0.666511, CompletionKeyword::Keyword},
+      },
+      {
+          {"B0", 0.666611, CompletionKeyword::NotKeyword},
+          {"BS0", 0.666556, CompletionKeyword::NotKeyword},
+          {"break", 0.666511, CompletionKeyword::Keyword},
+      },
+  };
+  for (const std::vector<TypedCandidate> &candidates : letters) {
+    const auto names = rankedTyped(candidates, true);
+    expect(names.front() == candidates.back().name,
+           "A statement keyword must precede the SDK names and declaration keywords on its first "
+           "letter.");
+  }
+}
+
 } // namespace
 
 int main() {
@@ -264,5 +302,6 @@ int main() {
   checkKeywordSemanticScore();
   checkFlair();
   checkTypedPrint();
+  checkOneLetterKeywords();
   return failures == 0 ? 0 : 1;
 }

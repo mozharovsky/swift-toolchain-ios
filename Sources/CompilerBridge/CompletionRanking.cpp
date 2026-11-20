@@ -99,10 +99,10 @@ double swift_toolchain::completionSemanticScore(CompletionSemanticContext contex
       order = 8.0;
       break;
     case CompletionKeyword::Keyword:
-      order = 6.5;
-      break;
-    case CompletionKeyword::HighPriorityKeyword:
       order = 5.5;
+      break;
+    case CompletionKeyword::DeclarationKeyword:
+      order = 6.5;
       break;
     }
     break;

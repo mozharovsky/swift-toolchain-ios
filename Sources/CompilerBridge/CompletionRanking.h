@@ -34,9 +34,12 @@ enum class CompletionSemanticContext {
 /// It decides the semantic context score of a result without a semantic context.
 enum class CompletionKeyword {
   NotKeyword,
+  /// A statement or expression keyword, such as `switch` or `await`.
+  ///
+  /// SourceKit's high-priority keywords, such as `let` and `func`, also belong here.
   Keyword,
-  /// A keyword that SourceKit promotes at statement starts, such as `let` or `return`.
-  HighPriorityKeyword,
+  /// A keyword or modifier that starts a declaration, such as `struct`, `private`, or `prefix`.
+  DeclarationKeyword,
 };
 
 /// The compiler's flags that make a result more or less likely at the completion position.
@@ -90,9 +93,10 @@ bool completionMatchesExactly(std::string_view filterName, std::string_view filt
 /// Returns the semantic context score from zero for a global name to one for a local name.
 ///
 /// The score follows SourceKit's table without import-depth data. A result without a semantic
-/// context scores zero unless it is a keyword. A high-priority keyword scores between the current
-/// module and an imported module, as in SourceKit. Any other keyword scores as a declaration from
-/// an imported module. A closer match of such a declaration therefore precedes the keyword.
+/// context scores zero unless it is a keyword. A statement or expression keyword scores between the
+/// current module and an imported module, as in SourceKit. A declaration keyword scores as a
+/// declaration from an imported module. A closer match of such a declaration therefore precedes
+/// the declaration keyword.
 double completionSemanticScore(CompletionSemanticContext context, CompletionKeyword keyword);
 
 /// Returns the ranking score of a result.
