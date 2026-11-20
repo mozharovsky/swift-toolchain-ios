@@ -29,9 +29,9 @@ struct CompletionRank {
   CompletionBucket bucket;
   /// The group without the meta groups, which orders results within one meta group.
   CompletionBucket baseBucket;
-  /// The normalized fuzzy-match score from zero to one, or zero for a list without a filter.
-  double matchScore;
-  /// The weighted sum of the match score and the semantic context score.
+  /// The weighted sum of the fuzzy-match score and the semantic context score.
+  ///
+  /// See `completionScore`.
   double score;
 };
 
@@ -49,12 +49,32 @@ std::string_view completionBaseName(std::string_view filterName);
 /// \param filter The identifier prefix that the person typed.
 bool completionMatchesExactly(std::string_view filterName, std::string_view filter);
 
+/// Returns the score that orders filtered results between the exact matches and the results that
+/// are not recommended.
+///
+/// The match weighs more than the semantic context.
+///
+/// \param matchScore The normalized fuzzy-match score from zero to one, or zero without a filter.
+/// \param semanticScore The semantic context score from zero for a global name to one for a local
+/// name.
+double completionScore(double matchScore, double semanticScore);
+
+/// Returns the group of a result once an exact match is known.
+///
+/// The backend calls it for the group that includes SourceKit's other meta groups. An exact match
+/// moves a result into the exact-match group. A result that is not recommended stays in its group
+/// even when it matches exactly. A recommended result therefore precedes it.
+///
+/// \param group The result's group, which may be `NotRecommended` or `ExpressionSpecific`.
+/// \param exactMatch Whether the typed filter is the result's base name.
+CompletionBucket completionBucket(CompletionBucket group, bool exactMatch);
+
 /// Returns whether one result precedes another in a completion list.
 ///
 /// Without a filter, the groups decide first, then the score, then the name. With a filter, exact
-/// matches come first and results that are not recommended come last. Between them, a better
-/// fuzzy match comes first, and the groups decide between equal matches. The backend sorts by
-/// this order before it cuts the list to the requested size.
+/// matches come first and results that are not recommended come last. Between them, the higher
+/// score comes first, and the groups decide between equal scores. The backend sorts by this order
+/// before it cuts the list to the requested size.
 ///
 /// \param a The first result.
 /// \param b The second result.

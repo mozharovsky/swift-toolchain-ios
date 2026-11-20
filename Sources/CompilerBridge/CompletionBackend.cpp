@@ -202,11 +202,10 @@ bool isHighPriorityKeyword(swift::ide::CodeCompletionKeywordKind kind) {
 }
 
 /// A simplified port of SourceKit's result buckets without popularity data.
+///
+/// `completionBucket` adds the exact-match group afterwards.
 Bucket bucketFor(const RankedResult &ranked, bool skipMetaGroups) {
   const CodeCompletionResult &result = *ranked.result;
-  if (ranked.exactMatch && !skipMetaGroups) {
-    return Bucket::ExactMatch;
-  }
   if (result.isNotRecommended() && !skipMetaGroups) {
     return Bucket::NotRecommended;
   }
@@ -332,8 +331,10 @@ void writeResults(llvm::json::OStream &json, std::vector<CodeCompletionResult *>
       }
       candidate.exactMatch = swift_toolchain::completionMatchesExactly(name, filter);
     }
-    candidate.rank = {name, bucket(candidate, false), bucket(candidate, true), matchScore,
-                      matchScore * 13 + semanticContextScore(*result) * 7};
+    candidate.rank = {
+        name, swift_toolchain::completionBucket(bucket(candidate, false), candidate.exactMatch),
+        bucket(candidate, true),
+        swift_toolchain::completionScore(matchScore, semanticContextScore(*result))};
     ranked.push_back(candidate);
   }
   matched = ranked.size();

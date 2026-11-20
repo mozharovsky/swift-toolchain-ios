@@ -50,6 +50,16 @@ bool swift_toolchain::completionMatchesExactly(std::string_view filterName,
   return !filter.empty() && compareInsensitive(completionBaseName(filterName), filter) == 0;
 }
 
+double swift_toolchain::completionScore(double matchScore, double semanticScore) {
+  return matchScore * 13 + semanticScore * 7;
+}
+
+swift_toolchain::CompletionBucket swift_toolchain::completionBucket(CompletionBucket group,
+                                                                    bool exactMatch) {
+  return exactMatch && group != CompletionBucket::NotRecommended ? CompletionBucket::ExactMatch
+                                                                 : group;
+}
+
 bool swift_toolchain::completionRanksBefore(const CompletionRank &a, const CompletionRank &b,
                                             bool filtering) {
   if (filtering) {
@@ -58,8 +68,10 @@ bool swift_toolchain::completionRanksBefore(const CompletionRank &a, const Compl
     if (left != right) {
       return left > right;
     }
-    if (a.matchScore != b.matchScore) {
-      return a.matchScore > b.matchScore;
+    // The score adds the semantic context to the match. The match alone would let a global name
+    // with a slightly closer match pass a local name.
+    if (a.score != b.score) {
+      return a.score > b.score;
     }
   }
   if (a.bucket != b.bucket) {
